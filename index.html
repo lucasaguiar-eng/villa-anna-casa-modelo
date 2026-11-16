@@ -1140,6 +1140,2999 @@ body.mover .mov{display:block}
 } )();
 
 </script>
+<script>/* three.js examples (MIT) */
+( function () {
+
+	// Ported from Stefan Gustavson's java implementation
+	// http://staffwww.itn.liu.se/~stegu/simplexnoise/simplexnoise.pdf
+	// Read Stefan's excellent paper for details on how this code works.
+	//
+	// Sean McCullough banksean@gmail.com
+	//
+	// Added 4D noise
+
+	/**
+ * You can pass in a random number generator object if you like.
+ * It is assumed to have a random() method.
+ */
+	class SimplexNoise {
+
+		constructor( r = Math ) {
+
+			this.grad3 = [[ 1, 1, 0 ], [ - 1, 1, 0 ], [ 1, - 1, 0 ], [ - 1, - 1, 0 ], [ 1, 0, 1 ], [ - 1, 0, 1 ], [ 1, 0, - 1 ], [ - 1, 0, - 1 ], [ 0, 1, 1 ], [ 0, - 1, 1 ], [ 0, 1, - 1 ], [ 0, - 1, - 1 ]];
+			this.grad4 = [[ 0, 1, 1, 1 ], [ 0, 1, 1, - 1 ], [ 0, 1, - 1, 1 ], [ 0, 1, - 1, - 1 ], [ 0, - 1, 1, 1 ], [ 0, - 1, 1, - 1 ], [ 0, - 1, - 1, 1 ], [ 0, - 1, - 1, - 1 ], [ 1, 0, 1, 1 ], [ 1, 0, 1, - 1 ], [ 1, 0, - 1, 1 ], [ 1, 0, - 1, - 1 ], [ - 1, 0, 1, 1 ], [ - 1, 0, 1, - 1 ], [ - 1, 0, - 1, 1 ], [ - 1, 0, - 1, - 1 ], [ 1, 1, 0, 1 ], [ 1, 1, 0, - 1 ], [ 1, - 1, 0, 1 ], [ 1, - 1, 0, - 1 ], [ - 1, 1, 0, 1 ], [ - 1, 1, 0, - 1 ], [ - 1, - 1, 0, 1 ], [ - 1, - 1, 0, - 1 ], [ 1, 1, 1, 0 ], [ 1, 1, - 1, 0 ], [ 1, - 1, 1, 0 ], [ 1, - 1, - 1, 0 ], [ - 1, 1, 1, 0 ], [ - 1, 1, - 1, 0 ], [ - 1, - 1, 1, 0 ], [ - 1, - 1, - 1, 0 ]];
+			this.p = [];
+
+			for ( let i = 0; i < 256; i ++ ) {
+
+				this.p[ i ] = Math.floor( r.random() * 256 );
+
+			} // To remove the need for index wrapping, double the permutation table length
+
+
+			this.perm = [];
+
+			for ( let i = 0; i < 512; i ++ ) {
+
+				this.perm[ i ] = this.p[ i & 255 ];
+
+			} // A lookup table to traverse the simplex around a given point in 4D.
+			// Details can be found where this table is used, in the 4D noise method.
+
+
+			this.simplex = [[ 0, 1, 2, 3 ], [ 0, 1, 3, 2 ], [ 0, 0, 0, 0 ], [ 0, 2, 3, 1 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 1, 2, 3, 0 ], [ 0, 2, 1, 3 ], [ 0, 0, 0, 0 ], [ 0, 3, 1, 2 ], [ 0, 3, 2, 1 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 1, 3, 2, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 1, 2, 0, 3 ], [ 0, 0, 0, 0 ], [ 1, 3, 0, 2 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 2, 3, 0, 1 ], [ 2, 3, 1, 0 ], [ 1, 0, 2, 3 ], [ 1, 0, 3, 2 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 2, 0, 3, 1 ], [ 0, 0, 0, 0 ], [ 2, 1, 3, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 2, 0, 1, 3 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 3, 0, 1, 2 ], [ 3, 0, 2, 1 ], [ 0, 0, 0, 0 ], [ 3, 1, 2, 0 ], [ 2, 1, 0, 3 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ], [ 3, 1, 0, 2 ], [ 0, 0, 0, 0 ], [ 3, 2, 0, 1 ], [ 3, 2, 1, 0 ]];
+
+		}
+
+		dot( g, x, y ) {
+
+			return g[ 0 ] * x + g[ 1 ] * y;
+
+		}
+
+		dot3( g, x, y, z ) {
+
+			return g[ 0 ] * x + g[ 1 ] * y + g[ 2 ] * z;
+
+		}
+
+		dot4( g, x, y, z, w ) {
+
+			return g[ 0 ] * x + g[ 1 ] * y + g[ 2 ] * z + g[ 3 ] * w;
+
+		}
+
+		noise( xin, yin ) {
+
+			let n0; // Noise contributions from the three corners
+
+			let n1;
+			let n2; // Skew the input space to determine which simplex cell we're in
+
+			const F2 = 0.5 * ( Math.sqrt( 3.0 ) - 1.0 );
+			const s = ( xin + yin ) * F2; // Hairy factor for 2D
+
+			const i = Math.floor( xin + s );
+			const j = Math.floor( yin + s );
+			const G2 = ( 3.0 - Math.sqrt( 3.0 ) ) / 6.0;
+			const t = ( i + j ) * G2;
+			const X0 = i - t; // Unskew the cell origin back to (x,y) space
+
+			const Y0 = j - t;
+			const x0 = xin - X0; // The x,y distances from the cell origin
+
+			const y0 = yin - Y0; // For the 2D case, the simplex shape is an equilateral triangle.
+			// Determine which simplex we are in.
+
+			let i1; // Offsets for second (middle) corner of simplex in (i,j) coords
+
+			let j1;
+
+			if ( x0 > y0 ) {
+
+				i1 = 1;
+				j1 = 0; // lower triangle, XY order: (0,0)->(1,0)->(1,1)
+
+			} else {
+
+				i1 = 0;
+				j1 = 1;
+
+			} // upper triangle, YX order: (0,0)->(0,1)->(1,1)
+			// A step of (1,0) in (i,j) means a step of (1-c,-c) in (x,y), and
+			// a step of (0,1) in (i,j) means a step of (-c,1-c) in (x,y), where
+			// c = (3-sqrt(3))/6
+
+
+			const x1 = x0 - i1 + G2; // Offsets for middle corner in (x,y) unskewed coords
+
+			const y1 = y0 - j1 + G2;
+			const x2 = x0 - 1.0 + 2.0 * G2; // Offsets for last corner in (x,y) unskewed coords
+
+			const y2 = y0 - 1.0 + 2.0 * G2; // Work out the hashed gradient indices of the three simplex corners
+
+			const ii = i & 255;
+			const jj = j & 255;
+			const gi0 = this.perm[ ii + this.perm[ jj ] ] % 12;
+			const gi1 = this.perm[ ii + i1 + this.perm[ jj + j1 ] ] % 12;
+			const gi2 = this.perm[ ii + 1 + this.perm[ jj + 1 ] ] % 12; // Calculate the contribution from the three corners
+
+			let t0 = 0.5 - x0 * x0 - y0 * y0;
+			if ( t0 < 0 ) n0 = 0.0; else {
+
+				t0 *= t0;
+				n0 = t0 * t0 * this.dot( this.grad3[ gi0 ], x0, y0 ); // (x,y) of grad3 used for 2D gradient
+
+			}
+
+			let t1 = 0.5 - x1 * x1 - y1 * y1;
+			if ( t1 < 0 ) n1 = 0.0; else {
+
+				t1 *= t1;
+				n1 = t1 * t1 * this.dot( this.grad3[ gi1 ], x1, y1 );
+
+			}
+
+			let t2 = 0.5 - x2 * x2 - y2 * y2;
+			if ( t2 < 0 ) n2 = 0.0; else {
+
+				t2 *= t2;
+				n2 = t2 * t2 * this.dot( this.grad3[ gi2 ], x2, y2 );
+
+			} // Add contributions from each corner to get the final noise value.
+			// The result is scaled to return values in the interval [-1,1].
+
+			return 70.0 * ( n0 + n1 + n2 );
+
+		} // 3D simplex noise
+
+
+		noise3d( xin, yin, zin ) {
+
+			let n0; // Noise contributions from the four corners
+
+			let n1;
+			let n2;
+			let n3; // Skew the input space to determine which simplex cell we're in
+
+			const F3 = 1.0 / 3.0;
+			const s = ( xin + yin + zin ) * F3; // Very nice and simple skew factor for 3D
+
+			const i = Math.floor( xin + s );
+			const j = Math.floor( yin + s );
+			const k = Math.floor( zin + s );
+			const G3 = 1.0 / 6.0; // Very nice and simple unskew factor, too
+
+			const t = ( i + j + k ) * G3;
+			const X0 = i - t; // Unskew the cell origin back to (x,y,z) space
+
+			const Y0 = j - t;
+			const Z0 = k - t;
+			const x0 = xin - X0; // The x,y,z distances from the cell origin
+
+			const y0 = yin - Y0;
+			const z0 = zin - Z0; // For the 3D case, the simplex shape is a slightly irregular tetrahedron.
+			// Determine which simplex we are in.
+
+			let i1; // Offsets for second corner of simplex in (i,j,k) coords
+
+			let j1;
+			let k1;
+			let i2; // Offsets for third corner of simplex in (i,j,k) coords
+
+			let j2;
+			let k2;
+
+			if ( x0 >= y0 ) {
+
+				if ( y0 >= z0 ) {
+
+					i1 = 1;
+					j1 = 0;
+					k1 = 0;
+					i2 = 1;
+					j2 = 1;
+					k2 = 0; // X Y Z order
+
+				} else if ( x0 >= z0 ) {
+
+					i1 = 1;
+					j1 = 0;
+					k1 = 0;
+					i2 = 1;
+					j2 = 0;
+					k2 = 1; // X Z Y order
+
+				} else {
+
+					i1 = 0;
+					j1 = 0;
+					k1 = 1;
+					i2 = 1;
+					j2 = 0;
+					k2 = 1;
+
+				} // Z X Y order
+
+			} else {
+
+				// x0<y0
+				if ( y0 < z0 ) {
+
+					i1 = 0;
+					j1 = 0;
+					k1 = 1;
+					i2 = 0;
+					j2 = 1;
+					k2 = 1; // Z Y X order
+
+				} else if ( x0 < z0 ) {
+
+					i1 = 0;
+					j1 = 1;
+					k1 = 0;
+					i2 = 0;
+					j2 = 1;
+					k2 = 1; // Y Z X order
+
+				} else {
+
+					i1 = 0;
+					j1 = 1;
+					k1 = 0;
+					i2 = 1;
+					j2 = 1;
+					k2 = 0;
+
+				} // Y X Z order
+
+			} // A step of (1,0,0) in (i,j,k) means a step of (1-c,-c,-c) in (x,y,z),
+			// a step of (0,1,0) in (i,j,k) means a step of (-c,1-c,-c) in (x,y,z), and
+			// a step of (0,0,1) in (i,j,k) means a step of (-c,-c,1-c) in (x,y,z), where
+			// c = 1/6.
+
+
+			const x1 = x0 - i1 + G3; // Offsets for second corner in (x,y,z) coords
+
+			const y1 = y0 - j1 + G3;
+			const z1 = z0 - k1 + G3;
+			const x2 = x0 - i2 + 2.0 * G3; // Offsets for third corner in (x,y,z) coords
+
+			const y2 = y0 - j2 + 2.0 * G3;
+			const z2 = z0 - k2 + 2.0 * G3;
+			const x3 = x0 - 1.0 + 3.0 * G3; // Offsets for last corner in (x,y,z) coords
+
+			const y3 = y0 - 1.0 + 3.0 * G3;
+			const z3 = z0 - 1.0 + 3.0 * G3; // Work out the hashed gradient indices of the four simplex corners
+
+			const ii = i & 255;
+			const jj = j & 255;
+			const kk = k & 255;
+			const gi0 = this.perm[ ii + this.perm[ jj + this.perm[ kk ] ] ] % 12;
+			const gi1 = this.perm[ ii + i1 + this.perm[ jj + j1 + this.perm[ kk + k1 ] ] ] % 12;
+			const gi2 = this.perm[ ii + i2 + this.perm[ jj + j2 + this.perm[ kk + k2 ] ] ] % 12;
+			const gi3 = this.perm[ ii + 1 + this.perm[ jj + 1 + this.perm[ kk + 1 ] ] ] % 12; // Calculate the contribution from the four corners
+
+			let t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;
+			if ( t0 < 0 ) n0 = 0.0; else {
+
+				t0 *= t0;
+				n0 = t0 * t0 * this.dot3( this.grad3[ gi0 ], x0, y0, z0 );
+
+			}
+
+			let t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1;
+			if ( t1 < 0 ) n1 = 0.0; else {
+
+				t1 *= t1;
+				n1 = t1 * t1 * this.dot3( this.grad3[ gi1 ], x1, y1, z1 );
+
+			}
+
+			let t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2;
+			if ( t2 < 0 ) n2 = 0.0; else {
+
+				t2 *= t2;
+				n2 = t2 * t2 * this.dot3( this.grad3[ gi2 ], x2, y2, z2 );
+
+			}
+
+			let t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3;
+			if ( t3 < 0 ) n3 = 0.0; else {
+
+				t3 *= t3;
+				n3 = t3 * t3 * this.dot3( this.grad3[ gi3 ], x3, y3, z3 );
+
+			} // Add contributions from each corner to get the final noise value.
+			// The result is scaled to stay just inside [-1,1]
+
+			return 32.0 * ( n0 + n1 + n2 + n3 );
+
+		} // 4D simplex noise
+
+
+		noise4d( x, y, z, w ) {
+
+			// For faster and easier lookups
+			const grad4 = this.grad4;
+			const simplex = this.simplex;
+			const perm = this.perm; // The skewing and unskewing factors are hairy again for the 4D case
+
+			const F4 = ( Math.sqrt( 5.0 ) - 1.0 ) / 4.0;
+			const G4 = ( 5.0 - Math.sqrt( 5.0 ) ) / 20.0;
+			let n0; // Noise contributions from the five corners
+
+			let n1;
+			let n2;
+			let n3;
+			let n4; // Skew the (x,y,z,w) space to determine which cell of 24 simplices we're in
+
+			const s = ( x + y + z + w ) * F4; // Factor for 4D skewing
+
+			const i = Math.floor( x + s );
+			const j = Math.floor( y + s );
+			const k = Math.floor( z + s );
+			const l = Math.floor( w + s );
+			const t = ( i + j + k + l ) * G4; // Factor for 4D unskewing
+
+			const X0 = i - t; // Unskew the cell origin back to (x,y,z,w) space
+
+			const Y0 = j - t;
+			const Z0 = k - t;
+			const W0 = l - t;
+			const x0 = x - X0; // The x,y,z,w distances from the cell origin
+
+			const y0 = y - Y0;
+			const z0 = z - Z0;
+			const w0 = w - W0; // For the 4D case, the simplex is a 4D shape I won't even try to describe.
+			// To find out which of the 24 possible simplices we're in, we need to
+			// determine the magnitude ordering of x0, y0, z0 and w0.
+			// The method below is a good way of finding the ordering of x,y,z,w and
+			// then find the correct traversal order for the simplex we’re in.
+			// First, six pair-wise comparisons are performed between each possible pair
+			// of the four coordinates, and the results are used to add up binary bits
+			// for an integer index.
+
+			const c1 = x0 > y0 ? 32 : 0;
+			const c2 = x0 > z0 ? 16 : 0;
+			const c3 = y0 > z0 ? 8 : 0;
+			const c4 = x0 > w0 ? 4 : 0;
+			const c5 = y0 > w0 ? 2 : 0;
+			const c6 = z0 > w0 ? 1 : 0;
+			const c = c1 + c2 + c3 + c4 + c5 + c6; // simplex[c] is a 4-vector with the numbers 0, 1, 2 and 3 in some order.
+			// Many values of c will never occur, since e.g. x>y>z>w makes x<z, y<w and x<w
+			// impossible. Only the 24 indices which have non-zero entries make any sense.
+			// We use a thresholding to set the coordinates in turn from the largest magnitude.
+			// The number 3 in the "simplex" array is at the position of the largest coordinate.
+
+			const i1 = simplex[ c ][ 0 ] >= 3 ? 1 : 0;
+			const j1 = simplex[ c ][ 1 ] >= 3 ? 1 : 0;
+			const k1 = simplex[ c ][ 2 ] >= 3 ? 1 : 0;
+			const l1 = simplex[ c ][ 3 ] >= 3 ? 1 : 0; // The number 2 in the "simplex" array is at the second largest coordinate.
+
+			const i2 = simplex[ c ][ 0 ] >= 2 ? 1 : 0;
+			const j2 = simplex[ c ][ 1 ] >= 2 ? 1 : 0;
+			const k2 = simplex[ c ][ 2 ] >= 2 ? 1 : 0;
+			const l2 = simplex[ c ][ 3 ] >= 2 ? 1 : 0; // The number 1 in the "simplex" array is at the second smallest coordinate.
+
+			const i3 = simplex[ c ][ 0 ] >= 1 ? 1 : 0;
+			const j3 = simplex[ c ][ 1 ] >= 1 ? 1 : 0;
+			const k3 = simplex[ c ][ 2 ] >= 1 ? 1 : 0;
+			const l3 = simplex[ c ][ 3 ] >= 1 ? 1 : 0; // The fifth corner has all coordinate offsets = 1, so no need to look that up.
+
+			const x1 = x0 - i1 + G4; // Offsets for second corner in (x,y,z,w) coords
+
+			const y1 = y0 - j1 + G4;
+			const z1 = z0 - k1 + G4;
+			const w1 = w0 - l1 + G4;
+			const x2 = x0 - i2 + 2.0 * G4; // Offsets for third corner in (x,y,z,w) coords
+
+			const y2 = y0 - j2 + 2.0 * G4;
+			const z2 = z0 - k2 + 2.0 * G4;
+			const w2 = w0 - l2 + 2.0 * G4;
+			const x3 = x0 - i3 + 3.0 * G4; // Offsets for fourth corner in (x,y,z,w) coords
+
+			const y3 = y0 - j3 + 3.0 * G4;
+			const z3 = z0 - k3 + 3.0 * G4;
+			const w3 = w0 - l3 + 3.0 * G4;
+			const x4 = x0 - 1.0 + 4.0 * G4; // Offsets for last corner in (x,y,z,w) coords
+
+			const y4 = y0 - 1.0 + 4.0 * G4;
+			const z4 = z0 - 1.0 + 4.0 * G4;
+			const w4 = w0 - 1.0 + 4.0 * G4; // Work out the hashed gradient indices of the five simplex corners
+
+			const ii = i & 255;
+			const jj = j & 255;
+			const kk = k & 255;
+			const ll = l & 255;
+			const gi0 = perm[ ii + perm[ jj + perm[ kk + perm[ ll ] ] ] ] % 32;
+			const gi1 = perm[ ii + i1 + perm[ jj + j1 + perm[ kk + k1 + perm[ ll + l1 ] ] ] ] % 32;
+			const gi2 = perm[ ii + i2 + perm[ jj + j2 + perm[ kk + k2 + perm[ ll + l2 ] ] ] ] % 32;
+			const gi3 = perm[ ii + i3 + perm[ jj + j3 + perm[ kk + k3 + perm[ ll + l3 ] ] ] ] % 32;
+			const gi4 = perm[ ii + 1 + perm[ jj + 1 + perm[ kk + 1 + perm[ ll + 1 ] ] ] ] % 32; // Calculate the contribution from the five corners
+
+			let t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0 - w0 * w0;
+			if ( t0 < 0 ) n0 = 0.0; else {
+
+				t0 *= t0;
+				n0 = t0 * t0 * this.dot4( grad4[ gi0 ], x0, y0, z0, w0 );
+
+			}
+
+			let t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1 - w1 * w1;
+			if ( t1 < 0 ) n1 = 0.0; else {
+
+				t1 *= t1;
+				n1 = t1 * t1 * this.dot4( grad4[ gi1 ], x1, y1, z1, w1 );
+
+			}
+
+			let t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2 - w2 * w2;
+			if ( t2 < 0 ) n2 = 0.0; else {
+
+				t2 *= t2;
+				n2 = t2 * t2 * this.dot4( grad4[ gi2 ], x2, y2, z2, w2 );
+
+			}
+
+			let t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3 - w3 * w3;
+			if ( t3 < 0 ) n3 = 0.0; else {
+
+				t3 *= t3;
+				n3 = t3 * t3 * this.dot4( grad4[ gi3 ], x3, y3, z3, w3 );
+
+			}
+
+			let t4 = 0.6 - x4 * x4 - y4 * y4 - z4 * z4 - w4 * w4;
+			if ( t4 < 0 ) n4 = 0.0; else {
+
+				t4 *= t4;
+				n4 = t4 * t4 * this.dot4( grad4[ gi4 ], x4, y4, z4, w4 );
+
+			} // Sum up and scale the result to cover the range [-1,1]
+
+			return 27.0 * ( n0 + n1 + n2 + n3 + n4 );
+
+		}
+
+	}
+
+	THREE.SimplexNoise = SimplexNoise;
+
+} )();
+</script>
+<script>/* three.js examples (MIT) */
+( function () {
+
+	/**
+ * Full-screen textured quad shader
+ */
+	var CopyShader = {
+		uniforms: {
+			'tDiffuse': {
+				value: null
+			},
+			'opacity': {
+				value: 1.0
+			}
+		},
+		vertexShader:
+  /* glsl */
+  `
+
+		varying vec2 vUv;
+
+		void main() {
+
+			vUv = uv;
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+		}`,
+		fragmentShader:
+  /* glsl */
+  `
+
+		uniform float opacity;
+
+		uniform sampler2D tDiffuse;
+
+		varying vec2 vUv;
+
+		void main() {
+
+			vec4 texel = texture2D( tDiffuse, vUv );
+			gl_FragColor = opacity * texel;
+
+		}`
+	};
+
+	THREE.CopyShader = CopyShader;
+
+} )();
+</script>
+<script>/* three.js examples (MIT) */
+( function () {
+
+	/**
+ * NVIDIA FXAA by Timothy Lottes
+ * http://timothylottes.blogspot.com/2011/06/fxaa3-source-released.html
+ * - WebGL port by @supereggbert
+ * http://www.glge.org/demos/fxaa/
+ */
+
+	const FXAAShader = {
+		uniforms: {
+			'tDiffuse': {
+				value: null
+			},
+			'resolution': {
+				value: new THREE.Vector2( 1 / 1024, 1 / 512 )
+			}
+		},
+		vertexShader:
+  /* glsl */
+  `
+
+		varying vec2 vUv;
+
+		void main() {
+
+			vUv = uv;
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+		}`,
+		fragmentShader: // FXAA 3.11 implementation by NVIDIA, ported to WebGL by Agost Biro (biro@archilogic.com)
+		//----------------------------------------------------------------------------------
+		// File:				es3-kepler\FXAA\assets\shaders/FXAA_DefaultES.frag
+		// SDK Version: v3.00
+		// Email:			 gameworks@nvidia.com
+		// Site:				http://developer.nvidia.com/
+		//
+		// Copyright (c) 2014-2015, NVIDIA CORPORATION. All rights reserved.
+		//
+		// Redistribution and use in source and binary forms, with or without
+		// modification, are permitted provided that the following conditions
+		// are met:
+		//	* Redistributions of source code must retain the above copyright
+		//		notice, this list of conditions and the following disclaimer.
+		//	* Redistributions in binary form must reproduce the above copyright
+		//		notice, this list of conditions and the following disclaimer in the
+		//		documentation and/or other materials provided with the distribution.
+		//	* Neither the name of NVIDIA CORPORATION nor the names of its
+		//		contributors may be used to endorse or promote products derived
+		//		from this software without specific prior written permission.
+		//
+		// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS\'\' AND ANY
+		// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+		// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+		// PURPOSE ARE DISCLAIMED.	IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+		// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+		// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+		// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+		// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+		// OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+		// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+		// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+		//
+		//----------------------------------------------------------------------------------
+
+  /* glsl */
+  `
+
+		precision highp float;
+
+		uniform sampler2D tDiffuse;
+
+		uniform vec2 resolution;
+
+		varying vec2 vUv;
+
+		#define FXAA_PC 1
+		#define FXAA_GLSL_100 1
+		#define FXAA_QUALITY_PRESET 12
+
+		#define FXAA_GREEN_AS_LUMA 1
+
+		/*--------------------------------------------------------------------------*/
+		#ifndef FXAA_PC_CONSOLE
+				//
+				// The console algorithm for PC is included
+				// for developers targeting really low spec machines.
+				// Likely better to just run FXAA_PC, and use a really low preset.
+				//
+				#define FXAA_PC_CONSOLE 0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#ifndef FXAA_GLSL_120
+				#define FXAA_GLSL_120 0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#ifndef FXAA_GLSL_130
+				#define FXAA_GLSL_130 0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#ifndef FXAA_HLSL_3
+				#define FXAA_HLSL_3 0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#ifndef FXAA_HLSL_4
+				#define FXAA_HLSL_4 0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#ifndef FXAA_HLSL_5
+				#define FXAA_HLSL_5 0
+		#endif
+		/*==========================================================================*/
+		#ifndef FXAA_GREEN_AS_LUMA
+				//
+				// For those using non-linear color,
+				// and either not able to get luma in alpha, or not wanting to,
+				// this enables FXAA to run using green as a proxy for luma.
+				// So with this enabled, no need to pack luma in alpha.
+				//
+				// This will turn off AA on anything which lacks some amount of green.
+				// Pure red and blue or combination of only R and B, will get no AA.
+				//
+				// Might want to lower the settings for both,
+				//		fxaaConsoleEdgeThresholdMin
+				//		fxaaQualityEdgeThresholdMin
+				// In order to insure AA does not get turned off on colors
+				// which contain a minor amount of green.
+				//
+				// 1 = On.
+				// 0 = Off.
+				//
+				#define FXAA_GREEN_AS_LUMA 0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#ifndef FXAA_EARLY_EXIT
+				//
+				// Controls algorithm\'s early exit path.
+				// On PS3 turning this ON adds 2 cycles to the shader.
+				// On 360 turning this OFF adds 10ths of a millisecond to the shader.
+				// Turning this off on console will result in a more blurry image.
+				// So this defaults to on.
+				//
+				// 1 = On.
+				// 0 = Off.
+				//
+				#define FXAA_EARLY_EXIT 1
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#ifndef FXAA_DISCARD
+				//
+				// Only valid for PC OpenGL currently.
+				// Probably will not work when FXAA_GREEN_AS_LUMA = 1.
+				//
+				// 1 = Use discard on pixels which don\'t need AA.
+				//		 For APIs which enable concurrent TEX+ROP from same surface.
+				// 0 = Return unchanged color on pixels which don\'t need AA.
+				//
+				#define FXAA_DISCARD 0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#ifndef FXAA_FAST_PIXEL_OFFSET
+				//
+				// Used for GLSL 120 only.
+				//
+				// 1 = GL API supports fast pixel offsets
+				// 0 = do not use fast pixel offsets
+				//
+				#ifdef GL_EXT_gpu_shader4
+						#define FXAA_FAST_PIXEL_OFFSET 1
+				#endif
+				#ifdef GL_NV_gpu_shader5
+						#define FXAA_FAST_PIXEL_OFFSET 1
+				#endif
+				#ifdef GL_ARB_gpu_shader5
+						#define FXAA_FAST_PIXEL_OFFSET 1
+				#endif
+				#ifndef FXAA_FAST_PIXEL_OFFSET
+						#define FXAA_FAST_PIXEL_OFFSET 0
+				#endif
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#ifndef FXAA_GATHER4_ALPHA
+				//
+				// 1 = API supports gather4 on alpha channel.
+				// 0 = API does not support gather4 on alpha channel.
+				//
+				#if (FXAA_HLSL_5 == 1)
+						#define FXAA_GATHER4_ALPHA 1
+				#endif
+				#ifdef GL_ARB_gpu_shader5
+						#define FXAA_GATHER4_ALPHA 1
+				#endif
+				#ifdef GL_NV_gpu_shader5
+						#define FXAA_GATHER4_ALPHA 1
+				#endif
+				#ifndef FXAA_GATHER4_ALPHA
+						#define FXAA_GATHER4_ALPHA 0
+				#endif
+		#endif
+
+
+		/*============================================================================
+														FXAA QUALITY - TUNING KNOBS
+		------------------------------------------------------------------------------
+		NOTE the other tuning knobs are now in the shader function inputs!
+		============================================================================*/
+		#ifndef FXAA_QUALITY_PRESET
+				//
+				// Choose the quality preset.
+				// This needs to be compiled into the shader as it effects code.
+				// Best option to include multiple presets is to
+				// in each shader define the preset, then include this file.
+				//
+				// OPTIONS
+				// -----------------------------------------------------------------------
+				// 10 to 15 - default medium dither (10=fastest, 15=highest quality)
+				// 20 to 29 - less dither, more expensive (20=fastest, 29=highest quality)
+				// 39			 - no dither, very expensive
+				//
+				// NOTES
+				// -----------------------------------------------------------------------
+				// 12 = slightly faster then FXAA 3.9 and higher edge quality (default)
+				// 13 = about same speed as FXAA 3.9 and better than 12
+				// 23 = closest to FXAA 3.9 visually and performance wise
+				//	_ = the lowest digit is directly related to performance
+				// _	= the highest digit is directly related to style
+				//
+				#define FXAA_QUALITY_PRESET 12
+		#endif
+
+
+		/*============================================================================
+
+															 FXAA QUALITY - PRESETS
+
+		============================================================================*/
+
+		/*============================================================================
+												 FXAA QUALITY - MEDIUM DITHER PRESETS
+		============================================================================*/
+		#if (FXAA_QUALITY_PRESET == 10)
+				#define FXAA_QUALITY_PS 3
+				#define FXAA_QUALITY_P0 1.5
+				#define FXAA_QUALITY_P1 3.0
+				#define FXAA_QUALITY_P2 12.0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_QUALITY_PRESET == 11)
+				#define FXAA_QUALITY_PS 4
+				#define FXAA_QUALITY_P0 1.0
+				#define FXAA_QUALITY_P1 1.5
+				#define FXAA_QUALITY_P2 3.0
+				#define FXAA_QUALITY_P3 12.0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_QUALITY_PRESET == 12)
+				#define FXAA_QUALITY_PS 5
+				#define FXAA_QUALITY_P0 1.0
+				#define FXAA_QUALITY_P1 1.5
+				#define FXAA_QUALITY_P2 2.0
+				#define FXAA_QUALITY_P3 4.0
+				#define FXAA_QUALITY_P4 12.0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_QUALITY_PRESET == 13)
+				#define FXAA_QUALITY_PS 6
+				#define FXAA_QUALITY_P0 1.0
+				#define FXAA_QUALITY_P1 1.5
+				#define FXAA_QUALITY_P2 2.0
+				#define FXAA_QUALITY_P3 2.0
+				#define FXAA_QUALITY_P4 4.0
+				#define FXAA_QUALITY_P5 12.0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_QUALITY_PRESET == 14)
+				#define FXAA_QUALITY_PS 7
+				#define FXAA_QUALITY_P0 1.0
+				#define FXAA_QUALITY_P1 1.5
+				#define FXAA_QUALITY_P2 2.0
+				#define FXAA_QUALITY_P3 2.0
+				#define FXAA_QUALITY_P4 2.0
+				#define FXAA_QUALITY_P5 4.0
+				#define FXAA_QUALITY_P6 12.0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_QUALITY_PRESET == 15)
+				#define FXAA_QUALITY_PS 8
+				#define FXAA_QUALITY_P0 1.0
+				#define FXAA_QUALITY_P1 1.5
+				#define FXAA_QUALITY_P2 2.0
+				#define FXAA_QUALITY_P3 2.0
+				#define FXAA_QUALITY_P4 2.0
+				#define FXAA_QUALITY_P5 2.0
+				#define FXAA_QUALITY_P6 4.0
+				#define FXAA_QUALITY_P7 12.0
+		#endif
+
+		/*============================================================================
+												 FXAA QUALITY - LOW DITHER PRESETS
+		============================================================================*/
+		#if (FXAA_QUALITY_PRESET == 20)
+				#define FXAA_QUALITY_PS 3
+				#define FXAA_QUALITY_P0 1.5
+				#define FXAA_QUALITY_P1 2.0
+				#define FXAA_QUALITY_P2 8.0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_QUALITY_PRESET == 21)
+				#define FXAA_QUALITY_PS 4
+				#define FXAA_QUALITY_P0 1.0
+				#define FXAA_QUALITY_P1 1.5
+				#define FXAA_QUALITY_P2 2.0
+				#define FXAA_QUALITY_P3 8.0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_QUALITY_PRESET == 22)
+				#define FXAA_QUALITY_PS 5
+				#define FXAA_QUALITY_P0 1.0
+				#define FXAA_QUALITY_P1 1.5
+				#define FXAA_QUALITY_P2 2.0
+				#define FXAA_QUALITY_P3 2.0
+				#define FXAA_QUALITY_P4 8.0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_QUALITY_PRESET == 23)
+				#define FXAA_QUALITY_PS 6
+				#define FXAA_QUALITY_P0 1.0
+				#define FXAA_QUALITY_P1 1.5
+				#define FXAA_QUALITY_P2 2.0
+				#define FXAA_QUALITY_P3 2.0
+				#define FXAA_QUALITY_P4 2.0
+				#define FXAA_QUALITY_P5 8.0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_QUALITY_PRESET == 24)
+				#define FXAA_QUALITY_PS 7
+				#define FXAA_QUALITY_P0 1.0
+				#define FXAA_QUALITY_P1 1.5
+				#define FXAA_QUALITY_P2 2.0
+				#define FXAA_QUALITY_P3 2.0
+				#define FXAA_QUALITY_P4 2.0
+				#define FXAA_QUALITY_P5 3.0
+				#define FXAA_QUALITY_P6 8.0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_QUALITY_PRESET == 25)
+				#define FXAA_QUALITY_PS 8
+				#define FXAA_QUALITY_P0 1.0
+				#define FXAA_QUALITY_P1 1.5
+				#define FXAA_QUALITY_P2 2.0
+				#define FXAA_QUALITY_P3 2.0
+				#define FXAA_QUALITY_P4 2.0
+				#define FXAA_QUALITY_P5 2.0
+				#define FXAA_QUALITY_P6 4.0
+				#define FXAA_QUALITY_P7 8.0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_QUALITY_PRESET == 26)
+				#define FXAA_QUALITY_PS 9
+				#define FXAA_QUALITY_P0 1.0
+				#define FXAA_QUALITY_P1 1.5
+				#define FXAA_QUALITY_P2 2.0
+				#define FXAA_QUALITY_P3 2.0
+				#define FXAA_QUALITY_P4 2.0
+				#define FXAA_QUALITY_P5 2.0
+				#define FXAA_QUALITY_P6 2.0
+				#define FXAA_QUALITY_P7 4.0
+				#define FXAA_QUALITY_P8 8.0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_QUALITY_PRESET == 27)
+				#define FXAA_QUALITY_PS 10
+				#define FXAA_QUALITY_P0 1.0
+				#define FXAA_QUALITY_P1 1.5
+				#define FXAA_QUALITY_P2 2.0
+				#define FXAA_QUALITY_P3 2.0
+				#define FXAA_QUALITY_P4 2.0
+				#define FXAA_QUALITY_P5 2.0
+				#define FXAA_QUALITY_P6 2.0
+				#define FXAA_QUALITY_P7 2.0
+				#define FXAA_QUALITY_P8 4.0
+				#define FXAA_QUALITY_P9 8.0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_QUALITY_PRESET == 28)
+				#define FXAA_QUALITY_PS 11
+				#define FXAA_QUALITY_P0 1.0
+				#define FXAA_QUALITY_P1 1.5
+				#define FXAA_QUALITY_P2 2.0
+				#define FXAA_QUALITY_P3 2.0
+				#define FXAA_QUALITY_P4 2.0
+				#define FXAA_QUALITY_P5 2.0
+				#define FXAA_QUALITY_P6 2.0
+				#define FXAA_QUALITY_P7 2.0
+				#define FXAA_QUALITY_P8 2.0
+				#define FXAA_QUALITY_P9 4.0
+				#define FXAA_QUALITY_P10 8.0
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_QUALITY_PRESET == 29)
+				#define FXAA_QUALITY_PS 12
+				#define FXAA_QUALITY_P0 1.0
+				#define FXAA_QUALITY_P1 1.5
+				#define FXAA_QUALITY_P2 2.0
+				#define FXAA_QUALITY_P3 2.0
+				#define FXAA_QUALITY_P4 2.0
+				#define FXAA_QUALITY_P5 2.0
+				#define FXAA_QUALITY_P6 2.0
+				#define FXAA_QUALITY_P7 2.0
+				#define FXAA_QUALITY_P8 2.0
+				#define FXAA_QUALITY_P9 2.0
+				#define FXAA_QUALITY_P10 4.0
+				#define FXAA_QUALITY_P11 8.0
+		#endif
+
+		/*============================================================================
+												 FXAA QUALITY - EXTREME QUALITY
+		============================================================================*/
+		#if (FXAA_QUALITY_PRESET == 39)
+				#define FXAA_QUALITY_PS 12
+				#define FXAA_QUALITY_P0 1.0
+				#define FXAA_QUALITY_P1 1.0
+				#define FXAA_QUALITY_P2 1.0
+				#define FXAA_QUALITY_P3 1.0
+				#define FXAA_QUALITY_P4 1.0
+				#define FXAA_QUALITY_P5 1.5
+				#define FXAA_QUALITY_P6 2.0
+				#define FXAA_QUALITY_P7 2.0
+				#define FXAA_QUALITY_P8 2.0
+				#define FXAA_QUALITY_P9 2.0
+				#define FXAA_QUALITY_P10 4.0
+				#define FXAA_QUALITY_P11 8.0
+		#endif
+
+
+
+		/*============================================================================
+
+																		API PORTING
+
+		============================================================================*/
+		#if (FXAA_GLSL_100 == 1) || (FXAA_GLSL_120 == 1) || (FXAA_GLSL_130 == 1)
+				#define FxaaBool bool
+				#define FxaaDiscard discard
+				#define FxaaFloat float
+				#define FxaaFloat2 vec2
+				#define FxaaFloat3 vec3
+				#define FxaaFloat4 vec4
+				#define FxaaHalf float
+				#define FxaaHalf2 vec2
+				#define FxaaHalf3 vec3
+				#define FxaaHalf4 vec4
+				#define FxaaInt2 ivec2
+				#define FxaaSat(x) clamp(x, 0.0, 1.0)
+				#define FxaaTex sampler2D
+		#else
+				#define FxaaBool bool
+				#define FxaaDiscard clip(-1)
+				#define FxaaFloat float
+				#define FxaaFloat2 float2
+				#define FxaaFloat3 float3
+				#define FxaaFloat4 float4
+				#define FxaaHalf half
+				#define FxaaHalf2 half2
+				#define FxaaHalf3 half3
+				#define FxaaHalf4 half4
+				#define FxaaSat(x) saturate(x)
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_GLSL_100 == 1)
+			#define FxaaTexTop(t, p) texture2D(t, p, 0.0)
+			#define FxaaTexOff(t, p, o, r) texture2D(t, p + (o * r), 0.0)
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_GLSL_120 == 1)
+				// Requires,
+				//	#version 120
+				// And at least,
+				//	#extension GL_EXT_gpu_shader4 : enable
+				//	(or set FXAA_FAST_PIXEL_OFFSET 1 to work like DX9)
+				#define FxaaTexTop(t, p) texture2DLod(t, p, 0.0)
+				#if (FXAA_FAST_PIXEL_OFFSET == 1)
+						#define FxaaTexOff(t, p, o, r) texture2DLodOffset(t, p, 0.0, o)
+				#else
+						#define FxaaTexOff(t, p, o, r) texture2DLod(t, p + (o * r), 0.0)
+				#endif
+				#if (FXAA_GATHER4_ALPHA == 1)
+						// use #extension GL_ARB_gpu_shader5 : enable
+						#define FxaaTexAlpha4(t, p) textureGather(t, p, 3)
+						#define FxaaTexOffAlpha4(t, p, o) textureGatherOffset(t, p, o, 3)
+						#define FxaaTexGreen4(t, p) textureGather(t, p, 1)
+						#define FxaaTexOffGreen4(t, p, o) textureGatherOffset(t, p, o, 1)
+				#endif
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_GLSL_130 == 1)
+				// Requires "#version 130" or better
+				#define FxaaTexTop(t, p) textureLod(t, p, 0.0)
+				#define FxaaTexOff(t, p, o, r) textureLodOffset(t, p, 0.0, o)
+				#if (FXAA_GATHER4_ALPHA == 1)
+						// use #extension GL_ARB_gpu_shader5 : enable
+						#define FxaaTexAlpha4(t, p) textureGather(t, p, 3)
+						#define FxaaTexOffAlpha4(t, p, o) textureGatherOffset(t, p, o, 3)
+						#define FxaaTexGreen4(t, p) textureGather(t, p, 1)
+						#define FxaaTexOffGreen4(t, p, o) textureGatherOffset(t, p, o, 1)
+				#endif
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_HLSL_3 == 1)
+				#define FxaaInt2 float2
+				#define FxaaTex sampler2D
+				#define FxaaTexTop(t, p) tex2Dlod(t, float4(p, 0.0, 0.0))
+				#define FxaaTexOff(t, p, o, r) tex2Dlod(t, float4(p + (o * r), 0, 0))
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_HLSL_4 == 1)
+				#define FxaaInt2 int2
+				struct FxaaTex { SamplerState smpl; Texture2D tex; };
+				#define FxaaTexTop(t, p) t.tex.SampleLevel(t.smpl, p, 0.0)
+				#define FxaaTexOff(t, p, o, r) t.tex.SampleLevel(t.smpl, p, 0.0, o)
+		#endif
+		/*--------------------------------------------------------------------------*/
+		#if (FXAA_HLSL_5 == 1)
+				#define FxaaInt2 int2
+				struct FxaaTex { SamplerState smpl; Texture2D tex; };
+				#define FxaaTexTop(t, p) t.tex.SampleLevel(t.smpl, p, 0.0)
+				#define FxaaTexOff(t, p, o, r) t.tex.SampleLevel(t.smpl, p, 0.0, o)
+				#define FxaaTexAlpha4(t, p) t.tex.GatherAlpha(t.smpl, p)
+				#define FxaaTexOffAlpha4(t, p, o) t.tex.GatherAlpha(t.smpl, p, o)
+				#define FxaaTexGreen4(t, p) t.tex.GatherGreen(t.smpl, p)
+				#define FxaaTexOffGreen4(t, p, o) t.tex.GatherGreen(t.smpl, p, o)
+		#endif
+
+
+		/*============================================================================
+											 GREEN AS LUMA OPTION SUPPORT FUNCTION
+		============================================================================*/
+		#if (FXAA_GREEN_AS_LUMA == 0)
+				FxaaFloat FxaaLuma(FxaaFloat4 rgba) { return rgba.w; }
+		#else
+				FxaaFloat FxaaLuma(FxaaFloat4 rgba) { return rgba.y; }
+		#endif
+
+
+
+
+		/*============================================================================
+
+																 FXAA3 QUALITY - PC
+
+		============================================================================*/
+		#if (FXAA_PC == 1)
+		/*--------------------------------------------------------------------------*/
+		FxaaFloat4 FxaaPixelShader(
+				//
+				// Use noperspective interpolation here (turn off perspective interpolation).
+				// {xy} = center of pixel
+				FxaaFloat2 pos,
+				//
+				// Used only for FXAA Console, and not used on the 360 version.
+				// Use noperspective interpolation here (turn off perspective interpolation).
+				// {xy_} = upper left of pixel
+				// {_zw} = lower right of pixel
+				FxaaFloat4 fxaaConsolePosPos,
+				//
+				// Input color texture.
+				// {rgb_} = color in linear or perceptual color space
+				// if (FXAA_GREEN_AS_LUMA == 0)
+				//		 {__a} = luma in perceptual color space (not linear)
+				FxaaTex tex,
+				//
+				// Only used on the optimized 360 version of FXAA Console.
+				// For everything but 360, just use the same input here as for "tex".
+				// For 360, same texture, just alias with a 2nd sampler.
+				// This sampler needs to have an exponent bias of -1.
+				FxaaTex fxaaConsole360TexExpBiasNegOne,
+				//
+				// Only used on the optimized 360 version of FXAA Console.
+				// For everything but 360, just use the same input here as for "tex".
+				// For 360, same texture, just alias with a 3nd sampler.
+				// This sampler needs to have an exponent bias of -2.
+				FxaaTex fxaaConsole360TexExpBiasNegTwo,
+				//
+				// Only used on FXAA Quality.
+				// This must be from a constant/uniform.
+				// {x_} = 1.0/screenWidthInPixels
+				// {_y} = 1.0/screenHeightInPixels
+				FxaaFloat2 fxaaQualityRcpFrame,
+				//
+				// Only used on FXAA Console.
+				// This must be from a constant/uniform.
+				// This effects sub-pixel AA quality and inversely sharpness.
+				//	 Where N ranges between,
+				//		 N = 0.50 (default)
+				//		 N = 0.33 (sharper)
+				// {x__} = -N/screenWidthInPixels
+				// {_y_} = -N/screenHeightInPixels
+				// {_z_} =	N/screenWidthInPixels
+				// {__w} =	N/screenHeightInPixels
+				FxaaFloat4 fxaaConsoleRcpFrameOpt,
+				//
+				// Only used on FXAA Console.
+				// Not used on 360, but used on PS3 and PC.
+				// This must be from a constant/uniform.
+				// {x__} = -2.0/screenWidthInPixels
+				// {_y_} = -2.0/screenHeightInPixels
+				// {_z_} =	2.0/screenWidthInPixels
+				// {__w} =	2.0/screenHeightInPixels
+				FxaaFloat4 fxaaConsoleRcpFrameOpt2,
+				//
+				// Only used on FXAA Console.
+				// Only used on 360 in place of fxaaConsoleRcpFrameOpt2.
+				// This must be from a constant/uniform.
+				// {x__} =	8.0/screenWidthInPixels
+				// {_y_} =	8.0/screenHeightInPixels
+				// {_z_} = -4.0/screenWidthInPixels
+				// {__w} = -4.0/screenHeightInPixels
+				FxaaFloat4 fxaaConsole360RcpFrameOpt2,
+				//
+				// Only used on FXAA Quality.
+				// This used to be the FXAA_QUALITY_SUBPIX define.
+				// It is here now to allow easier tuning.
+				// Choose the amount of sub-pixel aliasing removal.
+				// This can effect sharpness.
+				//	 1.00 - upper limit (softer)
+				//	 0.75 - default amount of filtering
+				//	 0.50 - lower limit (sharper, less sub-pixel aliasing removal)
+				//	 0.25 - almost off
+				//	 0.00 - completely off
+				FxaaFloat fxaaQualitySubpix,
+				//
+				// Only used on FXAA Quality.
+				// This used to be the FXAA_QUALITY_EDGE_THRESHOLD define.
+				// It is here now to allow easier tuning.
+				// The minimum amount of local contrast required to apply algorithm.
+				//	 0.333 - too little (faster)
+				//	 0.250 - low quality
+				//	 0.166 - default
+				//	 0.125 - high quality
+				//	 0.063 - overkill (slower)
+				FxaaFloat fxaaQualityEdgeThreshold,
+				//
+				// Only used on FXAA Quality.
+				// This used to be the FXAA_QUALITY_EDGE_THRESHOLD_MIN define.
+				// It is here now to allow easier tuning.
+				// Trims the algorithm from processing darks.
+				//	 0.0833 - upper limit (default, the start of visible unfiltered edges)
+				//	 0.0625 - high quality (faster)
+				//	 0.0312 - visible limit (slower)
+				// Special notes when using FXAA_GREEN_AS_LUMA,
+				//	 Likely want to set this to zero.
+				//	 As colors that are mostly not-green
+				//	 will appear very dark in the green channel!
+				//	 Tune by looking at mostly non-green content,
+				//	 then start at zero and increase until aliasing is a problem.
+				FxaaFloat fxaaQualityEdgeThresholdMin,
+				//
+				// Only used on FXAA Console.
+				// This used to be the FXAA_CONSOLE_EDGE_SHARPNESS define.
+				// It is here now to allow easier tuning.
+				// This does not effect PS3, as this needs to be compiled in.
+				//	 Use FXAA_CONSOLE_PS3_EDGE_SHARPNESS for PS3.
+				//	 Due to the PS3 being ALU bound,
+				//	 there are only three safe values here: 2 and 4 and 8.
+				//	 These options use the shaders ability to a free *|/ by 2|4|8.
+				// For all other platforms can be a non-power of two.
+				//	 8.0 is sharper (default!!!)
+				//	 4.0 is softer
+				//	 2.0 is really soft (good only for vector graphics inputs)
+				FxaaFloat fxaaConsoleEdgeSharpness,
+				//
+				// Only used on FXAA Console.
+				// This used to be the FXAA_CONSOLE_EDGE_THRESHOLD define.
+				// It is here now to allow easier tuning.
+				// This does not effect PS3, as this needs to be compiled in.
+				//	 Use FXAA_CONSOLE_PS3_EDGE_THRESHOLD for PS3.
+				//	 Due to the PS3 being ALU bound,
+				//	 there are only two safe values here: 1/4 and 1/8.
+				//	 These options use the shaders ability to a free *|/ by 2|4|8.
+				// The console setting has a different mapping than the quality setting.
+				// Other platforms can use other values.
+				//	 0.125 leaves less aliasing, but is softer (default!!!)
+				//	 0.25 leaves more aliasing, and is sharper
+				FxaaFloat fxaaConsoleEdgeThreshold,
+				//
+				// Only used on FXAA Console.
+				// This used to be the FXAA_CONSOLE_EDGE_THRESHOLD_MIN define.
+				// It is here now to allow easier tuning.
+				// Trims the algorithm from processing darks.
+				// The console setting has a different mapping than the quality setting.
+				// This only applies when FXAA_EARLY_EXIT is 1.
+				// This does not apply to PS3,
+				// PS3 was simplified to avoid more shader instructions.
+				//	 0.06 - faster but more aliasing in darks
+				//	 0.05 - default
+				//	 0.04 - slower and less aliasing in darks
+				// Special notes when using FXAA_GREEN_AS_LUMA,
+				//	 Likely want to set this to zero.
+				//	 As colors that are mostly not-green
+				//	 will appear very dark in the green channel!
+				//	 Tune by looking at mostly non-green content,
+				//	 then start at zero and increase until aliasing is a problem.
+				FxaaFloat fxaaConsoleEdgeThresholdMin,
+				//
+				// Extra constants for 360 FXAA Console only.
+				// Use zeros or anything else for other platforms.
+				// These must be in physical constant registers and NOT immediates.
+				// Immediates will result in compiler un-optimizing.
+				// {xyzw} = float4(1.0, -1.0, 0.25, -0.25)
+				FxaaFloat4 fxaaConsole360ConstDir
+		) {
+		/*--------------------------------------------------------------------------*/
+				FxaaFloat2 posM;
+				posM.x = pos.x;
+				posM.y = pos.y;
+				#if (FXAA_GATHER4_ALPHA == 1)
+						#if (FXAA_DISCARD == 0)
+								FxaaFloat4 rgbyM = FxaaTexTop(tex, posM);
+								#if (FXAA_GREEN_AS_LUMA == 0)
+										#define lumaM rgbyM.w
+								#else
+										#define lumaM rgbyM.y
+								#endif
+						#endif
+						#if (FXAA_GREEN_AS_LUMA == 0)
+								FxaaFloat4 luma4A = FxaaTexAlpha4(tex, posM);
+								FxaaFloat4 luma4B = FxaaTexOffAlpha4(tex, posM, FxaaInt2(-1, -1));
+						#else
+								FxaaFloat4 luma4A = FxaaTexGreen4(tex, posM);
+								FxaaFloat4 luma4B = FxaaTexOffGreen4(tex, posM, FxaaInt2(-1, -1));
+						#endif
+						#if (FXAA_DISCARD == 1)
+								#define lumaM luma4A.w
+						#endif
+						#define lumaE luma4A.z
+						#define lumaS luma4A.x
+						#define lumaSE luma4A.y
+						#define lumaNW luma4B.w
+						#define lumaN luma4B.z
+						#define lumaW luma4B.x
+				#else
+						FxaaFloat4 rgbyM = FxaaTexTop(tex, posM);
+						#if (FXAA_GREEN_AS_LUMA == 0)
+								#define lumaM rgbyM.w
+						#else
+								#define lumaM rgbyM.y
+						#endif
+						#if (FXAA_GLSL_100 == 1)
+							FxaaFloat lumaS = FxaaLuma(FxaaTexOff(tex, posM, FxaaFloat2( 0.0, 1.0), fxaaQualityRcpFrame.xy));
+							FxaaFloat lumaE = FxaaLuma(FxaaTexOff(tex, posM, FxaaFloat2( 1.0, 0.0), fxaaQualityRcpFrame.xy));
+							FxaaFloat lumaN = FxaaLuma(FxaaTexOff(tex, posM, FxaaFloat2( 0.0,-1.0), fxaaQualityRcpFrame.xy));
+							FxaaFloat lumaW = FxaaLuma(FxaaTexOff(tex, posM, FxaaFloat2(-1.0, 0.0), fxaaQualityRcpFrame.xy));
+						#else
+							FxaaFloat lumaS = FxaaLuma(FxaaTexOff(tex, posM, FxaaInt2( 0, 1), fxaaQualityRcpFrame.xy));
+							FxaaFloat lumaE = FxaaLuma(FxaaTexOff(tex, posM, FxaaInt2( 1, 0), fxaaQualityRcpFrame.xy));
+							FxaaFloat lumaN = FxaaLuma(FxaaTexOff(tex, posM, FxaaInt2( 0,-1), fxaaQualityRcpFrame.xy));
+							FxaaFloat lumaW = FxaaLuma(FxaaTexOff(tex, posM, FxaaInt2(-1, 0), fxaaQualityRcpFrame.xy));
+						#endif
+				#endif
+		/*--------------------------------------------------------------------------*/
+				FxaaFloat maxSM = max(lumaS, lumaM);
+				FxaaFloat minSM = min(lumaS, lumaM);
+				FxaaFloat maxESM = max(lumaE, maxSM);
+				FxaaFloat minESM = min(lumaE, minSM);
+				FxaaFloat maxWN = max(lumaN, lumaW);
+				FxaaFloat minWN = min(lumaN, lumaW);
+				FxaaFloat rangeMax = max(maxWN, maxESM);
+				FxaaFloat rangeMin = min(minWN, minESM);
+				FxaaFloat rangeMaxScaled = rangeMax * fxaaQualityEdgeThreshold;
+				FxaaFloat range = rangeMax - rangeMin;
+				FxaaFloat rangeMaxClamped = max(fxaaQualityEdgeThresholdMin, rangeMaxScaled);
+				FxaaBool earlyExit = range < rangeMaxClamped;
+		/*--------------------------------------------------------------------------*/
+				if(earlyExit)
+						#if (FXAA_DISCARD == 1)
+								FxaaDiscard;
+						#else
+								return rgbyM;
+						#endif
+		/*--------------------------------------------------------------------------*/
+				#if (FXAA_GATHER4_ALPHA == 0)
+						#if (FXAA_GLSL_100 == 1)
+							FxaaFloat lumaNW = FxaaLuma(FxaaTexOff(tex, posM, FxaaFloat2(-1.0,-1.0), fxaaQualityRcpFrame.xy));
+							FxaaFloat lumaSE = FxaaLuma(FxaaTexOff(tex, posM, FxaaFloat2( 1.0, 1.0), fxaaQualityRcpFrame.xy));
+							FxaaFloat lumaNE = FxaaLuma(FxaaTexOff(tex, posM, FxaaFloat2( 1.0,-1.0), fxaaQualityRcpFrame.xy));
+							FxaaFloat lumaSW = FxaaLuma(FxaaTexOff(tex, posM, FxaaFloat2(-1.0, 1.0), fxaaQualityRcpFrame.xy));
+						#else
+							FxaaFloat lumaNW = FxaaLuma(FxaaTexOff(tex, posM, FxaaInt2(-1,-1), fxaaQualityRcpFrame.xy));
+							FxaaFloat lumaSE = FxaaLuma(FxaaTexOff(tex, posM, FxaaInt2( 1, 1), fxaaQualityRcpFrame.xy));
+							FxaaFloat lumaNE = FxaaLuma(FxaaTexOff(tex, posM, FxaaInt2( 1,-1), fxaaQualityRcpFrame.xy));
+							FxaaFloat lumaSW = FxaaLuma(FxaaTexOff(tex, posM, FxaaInt2(-1, 1), fxaaQualityRcpFrame.xy));
+						#endif
+				#else
+						FxaaFloat lumaNE = FxaaLuma(FxaaTexOff(tex, posM, FxaaInt2(1, -1), fxaaQualityRcpFrame.xy));
+						FxaaFloat lumaSW = FxaaLuma(FxaaTexOff(tex, posM, FxaaInt2(-1, 1), fxaaQualityRcpFrame.xy));
+				#endif
+		/*--------------------------------------------------------------------------*/
+				FxaaFloat lumaNS = lumaN + lumaS;
+				FxaaFloat lumaWE = lumaW + lumaE;
+				FxaaFloat subpixRcpRange = 1.0/range;
+				FxaaFloat subpixNSWE = lumaNS + lumaWE;
+				FxaaFloat edgeHorz1 = (-2.0 * lumaM) + lumaNS;
+				FxaaFloat edgeVert1 = (-2.0 * lumaM) + lumaWE;
+		/*--------------------------------------------------------------------------*/
+				FxaaFloat lumaNESE = lumaNE + lumaSE;
+				FxaaFloat lumaNWNE = lumaNW + lumaNE;
+				FxaaFloat edgeHorz2 = (-2.0 * lumaE) + lumaNESE;
+				FxaaFloat edgeVert2 = (-2.0 * lumaN) + lumaNWNE;
+		/*--------------------------------------------------------------------------*/
+				FxaaFloat lumaNWSW = lumaNW + lumaSW;
+				FxaaFloat lumaSWSE = lumaSW + lumaSE;
+				FxaaFloat edgeHorz4 = (abs(edgeHorz1) * 2.0) + abs(edgeHorz2);
+				FxaaFloat edgeVert4 = (abs(edgeVert1) * 2.0) + abs(edgeVert2);
+				FxaaFloat edgeHorz3 = (-2.0 * lumaW) + lumaNWSW;
+				FxaaFloat edgeVert3 = (-2.0 * lumaS) + lumaSWSE;
+				FxaaFloat edgeHorz = abs(edgeHorz3) + edgeHorz4;
+				FxaaFloat edgeVert = abs(edgeVert3) + edgeVert4;
+		/*--------------------------------------------------------------------------*/
+				FxaaFloat subpixNWSWNESE = lumaNWSW + lumaNESE;
+				FxaaFloat lengthSign = fxaaQualityRcpFrame.x;
+				FxaaBool horzSpan = edgeHorz >= edgeVert;
+				FxaaFloat subpixA = subpixNSWE * 2.0 + subpixNWSWNESE;
+		/*--------------------------------------------------------------------------*/
+				if(!horzSpan) lumaN = lumaW;
+				if(!horzSpan) lumaS = lumaE;
+				if(horzSpan) lengthSign = fxaaQualityRcpFrame.y;
+				FxaaFloat subpixB = (subpixA * (1.0/12.0)) - lumaM;
+		/*--------------------------------------------------------------------------*/
+				FxaaFloat gradientN = lumaN - lumaM;
+				FxaaFloat gradientS = lumaS - lumaM;
+				FxaaFloat lumaNN = lumaN + lumaM;
+				FxaaFloat lumaSS = lumaS + lumaM;
+				FxaaBool pairN = abs(gradientN) >= abs(gradientS);
+				FxaaFloat gradient = max(abs(gradientN), abs(gradientS));
+				if(pairN) lengthSign = -lengthSign;
+				FxaaFloat subpixC = FxaaSat(abs(subpixB) * subpixRcpRange);
+		/*--------------------------------------------------------------------------*/
+				FxaaFloat2 posB;
+				posB.x = posM.x;
+				posB.y = posM.y;
+				FxaaFloat2 offNP;
+				offNP.x = (!horzSpan) ? 0.0 : fxaaQualityRcpFrame.x;
+				offNP.y = ( horzSpan) ? 0.0 : fxaaQualityRcpFrame.y;
+				if(!horzSpan) posB.x += lengthSign * 0.5;
+				if( horzSpan) posB.y += lengthSign * 0.5;
+		/*--------------------------------------------------------------------------*/
+				FxaaFloat2 posN;
+				posN.x = posB.x - offNP.x * FXAA_QUALITY_P0;
+				posN.y = posB.y - offNP.y * FXAA_QUALITY_P0;
+				FxaaFloat2 posP;
+				posP.x = posB.x + offNP.x * FXAA_QUALITY_P0;
+				posP.y = posB.y + offNP.y * FXAA_QUALITY_P0;
+				FxaaFloat subpixD = ((-2.0)*subpixC) + 3.0;
+				FxaaFloat lumaEndN = FxaaLuma(FxaaTexTop(tex, posN));
+				FxaaFloat subpixE = subpixC * subpixC;
+				FxaaFloat lumaEndP = FxaaLuma(FxaaTexTop(tex, posP));
+		/*--------------------------------------------------------------------------*/
+				if(!pairN) lumaNN = lumaSS;
+				FxaaFloat gradientScaled = gradient * 1.0/4.0;
+				FxaaFloat lumaMM = lumaM - lumaNN * 0.5;
+				FxaaFloat subpixF = subpixD * subpixE;
+				FxaaBool lumaMLTZero = lumaMM < 0.0;
+		/*--------------------------------------------------------------------------*/
+				lumaEndN -= lumaNN * 0.5;
+				lumaEndP -= lumaNN * 0.5;
+				FxaaBool doneN = abs(lumaEndN) >= gradientScaled;
+				FxaaBool doneP = abs(lumaEndP) >= gradientScaled;
+				if(!doneN) posN.x -= offNP.x * FXAA_QUALITY_P1;
+				if(!doneN) posN.y -= offNP.y * FXAA_QUALITY_P1;
+				FxaaBool doneNP = (!doneN) || (!doneP);
+				if(!doneP) posP.x += offNP.x * FXAA_QUALITY_P1;
+				if(!doneP) posP.y += offNP.y * FXAA_QUALITY_P1;
+		/*--------------------------------------------------------------------------*/
+				if(doneNP) {
+						if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
+						if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
+						if(!doneN) lumaEndN = lumaEndN - lumaNN * 0.5;
+						if(!doneP) lumaEndP = lumaEndP - lumaNN * 0.5;
+						doneN = abs(lumaEndN) >= gradientScaled;
+						doneP = abs(lumaEndP) >= gradientScaled;
+						if(!doneN) posN.x -= offNP.x * FXAA_QUALITY_P2;
+						if(!doneN) posN.y -= offNP.y * FXAA_QUALITY_P2;
+						doneNP = (!doneN) || (!doneP);
+						if(!doneP) posP.x += offNP.x * FXAA_QUALITY_P2;
+						if(!doneP) posP.y += offNP.y * FXAA_QUALITY_P2;
+		/*--------------------------------------------------------------------------*/
+						#if (FXAA_QUALITY_PS > 3)
+						if(doneNP) {
+								if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
+								if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
+								if(!doneN) lumaEndN = lumaEndN - lumaNN * 0.5;
+								if(!doneP) lumaEndP = lumaEndP - lumaNN * 0.5;
+								doneN = abs(lumaEndN) >= gradientScaled;
+								doneP = abs(lumaEndP) >= gradientScaled;
+								if(!doneN) posN.x -= offNP.x * FXAA_QUALITY_P3;
+								if(!doneN) posN.y -= offNP.y * FXAA_QUALITY_P3;
+								doneNP = (!doneN) || (!doneP);
+								if(!doneP) posP.x += offNP.x * FXAA_QUALITY_P3;
+								if(!doneP) posP.y += offNP.y * FXAA_QUALITY_P3;
+		/*--------------------------------------------------------------------------*/
+								#if (FXAA_QUALITY_PS > 4)
+								if(doneNP) {
+										if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
+										if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
+										if(!doneN) lumaEndN = lumaEndN - lumaNN * 0.5;
+										if(!doneP) lumaEndP = lumaEndP - lumaNN * 0.5;
+										doneN = abs(lumaEndN) >= gradientScaled;
+										doneP = abs(lumaEndP) >= gradientScaled;
+										if(!doneN) posN.x -= offNP.x * FXAA_QUALITY_P4;
+										if(!doneN) posN.y -= offNP.y * FXAA_QUALITY_P4;
+										doneNP = (!doneN) || (!doneP);
+										if(!doneP) posP.x += offNP.x * FXAA_QUALITY_P4;
+										if(!doneP) posP.y += offNP.y * FXAA_QUALITY_P4;
+		/*--------------------------------------------------------------------------*/
+										#if (FXAA_QUALITY_PS > 5)
+										if(doneNP) {
+												if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
+												if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
+												if(!doneN) lumaEndN = lumaEndN - lumaNN * 0.5;
+												if(!doneP) lumaEndP = lumaEndP - lumaNN * 0.5;
+												doneN = abs(lumaEndN) >= gradientScaled;
+												doneP = abs(lumaEndP) >= gradientScaled;
+												if(!doneN) posN.x -= offNP.x * FXAA_QUALITY_P5;
+												if(!doneN) posN.y -= offNP.y * FXAA_QUALITY_P5;
+												doneNP = (!doneN) || (!doneP);
+												if(!doneP) posP.x += offNP.x * FXAA_QUALITY_P5;
+												if(!doneP) posP.y += offNP.y * FXAA_QUALITY_P5;
+		/*--------------------------------------------------------------------------*/
+												#if (FXAA_QUALITY_PS > 6)
+												if(doneNP) {
+														if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
+														if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
+														if(!doneN) lumaEndN = lumaEndN - lumaNN * 0.5;
+														if(!doneP) lumaEndP = lumaEndP - lumaNN * 0.5;
+														doneN = abs(lumaEndN) >= gradientScaled;
+														doneP = abs(lumaEndP) >= gradientScaled;
+														if(!doneN) posN.x -= offNP.x * FXAA_QUALITY_P6;
+														if(!doneN) posN.y -= offNP.y * FXAA_QUALITY_P6;
+														doneNP = (!doneN) || (!doneP);
+														if(!doneP) posP.x += offNP.x * FXAA_QUALITY_P6;
+														if(!doneP) posP.y += offNP.y * FXAA_QUALITY_P6;
+		/*--------------------------------------------------------------------------*/
+														#if (FXAA_QUALITY_PS > 7)
+														if(doneNP) {
+																if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
+																if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
+																if(!doneN) lumaEndN = lumaEndN - lumaNN * 0.5;
+																if(!doneP) lumaEndP = lumaEndP - lumaNN * 0.5;
+																doneN = abs(lumaEndN) >= gradientScaled;
+																doneP = abs(lumaEndP) >= gradientScaled;
+																if(!doneN) posN.x -= offNP.x * FXAA_QUALITY_P7;
+																if(!doneN) posN.y -= offNP.y * FXAA_QUALITY_P7;
+																doneNP = (!doneN) || (!doneP);
+																if(!doneP) posP.x += offNP.x * FXAA_QUALITY_P7;
+																if(!doneP) posP.y += offNP.y * FXAA_QUALITY_P7;
+		/*--------------------------------------------------------------------------*/
+				#if (FXAA_QUALITY_PS > 8)
+				if(doneNP) {
+						if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
+						if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
+						if(!doneN) lumaEndN = lumaEndN - lumaNN * 0.5;
+						if(!doneP) lumaEndP = lumaEndP - lumaNN * 0.5;
+						doneN = abs(lumaEndN) >= gradientScaled;
+						doneP = abs(lumaEndP) >= gradientScaled;
+						if(!doneN) posN.x -= offNP.x * FXAA_QUALITY_P8;
+						if(!doneN) posN.y -= offNP.y * FXAA_QUALITY_P8;
+						doneNP = (!doneN) || (!doneP);
+						if(!doneP) posP.x += offNP.x * FXAA_QUALITY_P8;
+						if(!doneP) posP.y += offNP.y * FXAA_QUALITY_P8;
+		/*--------------------------------------------------------------------------*/
+						#if (FXAA_QUALITY_PS > 9)
+						if(doneNP) {
+								if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
+								if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
+								if(!doneN) lumaEndN = lumaEndN - lumaNN * 0.5;
+								if(!doneP) lumaEndP = lumaEndP - lumaNN * 0.5;
+								doneN = abs(lumaEndN) >= gradientScaled;
+								doneP = abs(lumaEndP) >= gradientScaled;
+								if(!doneN) posN.x -= offNP.x * FXAA_QUALITY_P9;
+								if(!doneN) posN.y -= offNP.y * FXAA_QUALITY_P9;
+								doneNP = (!doneN) || (!doneP);
+								if(!doneP) posP.x += offNP.x * FXAA_QUALITY_P9;
+								if(!doneP) posP.y += offNP.y * FXAA_QUALITY_P9;
+		/*--------------------------------------------------------------------------*/
+								#if (FXAA_QUALITY_PS > 10)
+								if(doneNP) {
+										if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
+										if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
+										if(!doneN) lumaEndN = lumaEndN - lumaNN * 0.5;
+										if(!doneP) lumaEndP = lumaEndP - lumaNN * 0.5;
+										doneN = abs(lumaEndN) >= gradientScaled;
+										doneP = abs(lumaEndP) >= gradientScaled;
+										if(!doneN) posN.x -= offNP.x * FXAA_QUALITY_P10;
+										if(!doneN) posN.y -= offNP.y * FXAA_QUALITY_P10;
+										doneNP = (!doneN) || (!doneP);
+										if(!doneP) posP.x += offNP.x * FXAA_QUALITY_P10;
+										if(!doneP) posP.y += offNP.y * FXAA_QUALITY_P10;
+		/*--------------------------------------------------------------------------*/
+										#if (FXAA_QUALITY_PS > 11)
+										if(doneNP) {
+												if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
+												if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
+												if(!doneN) lumaEndN = lumaEndN - lumaNN * 0.5;
+												if(!doneP) lumaEndP = lumaEndP - lumaNN * 0.5;
+												doneN = abs(lumaEndN) >= gradientScaled;
+												doneP = abs(lumaEndP) >= gradientScaled;
+												if(!doneN) posN.x -= offNP.x * FXAA_QUALITY_P11;
+												if(!doneN) posN.y -= offNP.y * FXAA_QUALITY_P11;
+												doneNP = (!doneN) || (!doneP);
+												if(!doneP) posP.x += offNP.x * FXAA_QUALITY_P11;
+												if(!doneP) posP.y += offNP.y * FXAA_QUALITY_P11;
+		/*--------------------------------------------------------------------------*/
+												#if (FXAA_QUALITY_PS > 12)
+												if(doneNP) {
+														if(!doneN) lumaEndN = FxaaLuma(FxaaTexTop(tex, posN.xy));
+														if(!doneP) lumaEndP = FxaaLuma(FxaaTexTop(tex, posP.xy));
+														if(!doneN) lumaEndN = lumaEndN - lumaNN * 0.5;
+														if(!doneP) lumaEndP = lumaEndP - lumaNN * 0.5;
+														doneN = abs(lumaEndN) >= gradientScaled;
+														doneP = abs(lumaEndP) >= gradientScaled;
+														if(!doneN) posN.x -= offNP.x * FXAA_QUALITY_P12;
+														if(!doneN) posN.y -= offNP.y * FXAA_QUALITY_P12;
+														doneNP = (!doneN) || (!doneP);
+														if(!doneP) posP.x += offNP.x * FXAA_QUALITY_P12;
+														if(!doneP) posP.y += offNP.y * FXAA_QUALITY_P12;
+		/*--------------------------------------------------------------------------*/
+												}
+												#endif
+		/*--------------------------------------------------------------------------*/
+										}
+										#endif
+		/*--------------------------------------------------------------------------*/
+								}
+								#endif
+		/*--------------------------------------------------------------------------*/
+						}
+						#endif
+		/*--------------------------------------------------------------------------*/
+				}
+				#endif
+		/*--------------------------------------------------------------------------*/
+														}
+														#endif
+		/*--------------------------------------------------------------------------*/
+												}
+												#endif
+		/*--------------------------------------------------------------------------*/
+										}
+										#endif
+		/*--------------------------------------------------------------------------*/
+								}
+								#endif
+		/*--------------------------------------------------------------------------*/
+						}
+						#endif
+		/*--------------------------------------------------------------------------*/
+				}
+		/*--------------------------------------------------------------------------*/
+				FxaaFloat dstN = posM.x - posN.x;
+				FxaaFloat dstP = posP.x - posM.x;
+				if(!horzSpan) dstN = posM.y - posN.y;
+				if(!horzSpan) dstP = posP.y - posM.y;
+		/*--------------------------------------------------------------------------*/
+				FxaaBool goodSpanN = (lumaEndN < 0.0) != lumaMLTZero;
+				FxaaFloat spanLength = (dstP + dstN);
+				FxaaBool goodSpanP = (lumaEndP < 0.0) != lumaMLTZero;
+				FxaaFloat spanLengthRcp = 1.0/spanLength;
+		/*--------------------------------------------------------------------------*/
+				FxaaBool directionN = dstN < dstP;
+				FxaaFloat dst = min(dstN, dstP);
+				FxaaBool goodSpan = directionN ? goodSpanN : goodSpanP;
+				FxaaFloat subpixG = subpixF * subpixF;
+				FxaaFloat pixelOffset = (dst * (-spanLengthRcp)) + 0.5;
+				FxaaFloat subpixH = subpixG * fxaaQualitySubpix;
+		/*--------------------------------------------------------------------------*/
+				FxaaFloat pixelOffsetGood = goodSpan ? pixelOffset : 0.0;
+				FxaaFloat pixelOffsetSubpix = max(pixelOffsetGood, subpixH);
+				if(!horzSpan) posM.x += pixelOffsetSubpix * lengthSign;
+				if( horzSpan) posM.y += pixelOffsetSubpix * lengthSign;
+				#if (FXAA_DISCARD == 1)
+						return FxaaTexTop(tex, posM);
+				#else
+						return FxaaFloat4(FxaaTexTop(tex, posM).xyz, lumaM);
+				#endif
+		}
+		/*==========================================================================*/
+		#endif
+
+		void main() {
+			gl_FragColor = FxaaPixelShader(
+				vUv,
+				vec4(0.0),
+				tDiffuse,
+				tDiffuse,
+				tDiffuse,
+				resolution,
+				vec4(0.0),
+				vec4(0.0),
+				vec4(0.0),
+				0.75,
+				0.166,
+				0.0833,
+				0.0,
+				0.0,
+				0.0,
+				vec4(0.0)
+			);
+
+			// TODO avoid querying texture twice for same texel
+			gl_FragColor.a = texture2D(tDiffuse, vUv).a;
+		}`
+	};
+
+	THREE.FXAAShader = FXAAShader;
+
+} )();
+</script>
+<script>/* three.js examples (MIT) */
+( function () {
+
+	/**
+ * References:
+ * http://john-chapman-graphics.blogspot.com/2013/01/ssao-tutorial.html
+ * https://learnopengl.com/Advanced-Lighting/SSAO
+ * https://github.com/McNopper/OpenGL/blob/master/Example28/shader/ssao.frag.glsl
+ */
+
+	const SSAOShader = {
+		defines: {
+			'PERSPECTIVE_CAMERA': 1,
+			'KERNEL_SIZE': 32
+		},
+		uniforms: {
+			'tDiffuse': {
+				value: null
+			},
+			'tNormal': {
+				value: null
+			},
+			'tDepth': {
+				value: null
+			},
+			'tNoise': {
+				value: null
+			},
+			'kernel': {
+				value: null
+			},
+			'cameraNear': {
+				value: null
+			},
+			'cameraFar': {
+				value: null
+			},
+			'resolution': {
+				value: new THREE.Vector2()
+			},
+			'cameraProjectionMatrix': {
+				value: new THREE.Matrix4()
+			},
+			'cameraInverseProjectionMatrix': {
+				value: new THREE.Matrix4()
+			},
+			'kernelRadius': {
+				value: 8
+			},
+			'minDistance': {
+				value: 0.005
+			},
+			'maxDistance': {
+				value: 0.05
+			}
+		},
+		vertexShader:
+  /* glsl */
+  `
+
+		varying vec2 vUv;
+
+		void main() {
+
+			vUv = uv;
+
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+		}`,
+		fragmentShader:
+  /* glsl */
+  `
+
+		uniform sampler2D tDiffuse;
+		uniform sampler2D tNormal;
+		uniform sampler2D tDepth;
+		uniform sampler2D tNoise;
+
+		uniform vec3 kernel[ KERNEL_SIZE ];
+
+		uniform vec2 resolution;
+
+		uniform float cameraNear;
+		uniform float cameraFar;
+		uniform mat4 cameraProjectionMatrix;
+		uniform mat4 cameraInverseProjectionMatrix;
+
+		uniform float kernelRadius;
+		uniform float minDistance; // avoid artifacts caused by neighbour fragments with minimal depth difference
+		uniform float maxDistance; // avoid the influence of fragments which are too far away
+
+		varying vec2 vUv;
+
+		#include <packing>
+
+		float getDepth( const in vec2 screenPosition ) {
+
+			return texture2D( tDepth, screenPosition ).x;
+
+		}
+
+		float getLinearDepth( const in vec2 screenPosition ) {
+
+			#if PERSPECTIVE_CAMERA == 1
+
+				float fragCoordZ = texture2D( tDepth, screenPosition ).x;
+				float viewZ = perspectiveDepthToViewZ( fragCoordZ, cameraNear, cameraFar );
+				return viewZToOrthographicDepth( viewZ, cameraNear, cameraFar );
+
+			#else
+
+				return texture2D( tDepth, screenPosition ).x;
+
+			#endif
+
+		}
+
+		float getViewZ( const in float depth ) {
+
+			#if PERSPECTIVE_CAMERA == 1
+
+				return perspectiveDepthToViewZ( depth, cameraNear, cameraFar );
+
+			#else
+
+				return orthographicDepthToViewZ( depth, cameraNear, cameraFar );
+
+			#endif
+
+		}
+
+		vec3 getViewPosition( const in vec2 screenPosition, const in float depth, const in float viewZ ) {
+
+			float clipW = cameraProjectionMatrix[2][3] * viewZ + cameraProjectionMatrix[3][3];
+
+			vec4 clipPosition = vec4( ( vec3( screenPosition, depth ) - 0.5 ) * 2.0, 1.0 );
+
+			clipPosition *= clipW; // unprojection.
+
+			return ( cameraInverseProjectionMatrix * clipPosition ).xyz;
+
+		}
+
+		vec3 getViewNormal( const in vec2 screenPosition ) {
+
+			return unpackRGBToNormal( texture2D( tNormal, screenPosition ).xyz );
+
+		}
+
+		void main() {
+
+			float depth = getDepth( vUv );
+			float viewZ = getViewZ( depth );
+
+			vec3 viewPosition = getViewPosition( vUv, depth, viewZ );
+			vec3 viewNormal = getViewNormal( vUv );
+
+			vec2 noiseScale = vec2( resolution.x / 4.0, resolution.y / 4.0 );
+			vec3 random = texture2D( tNoise, vUv * noiseScale ).xyz;
+
+			// compute matrix used to reorient a kernel vector
+
+			vec3 tangent = normalize( random - viewNormal * dot( random, viewNormal ) );
+			vec3 bitangent = cross( viewNormal, tangent );
+			mat3 kernelMatrix = mat3( tangent, bitangent, viewNormal );
+
+		 float occlusion = 0.0;
+
+		 for ( int i = 0; i < KERNEL_SIZE; i ++ ) {
+
+				vec3 sampleVector = kernelMatrix * kernel[ i ]; // reorient sample vector in view space
+				vec3 samplePoint = viewPosition + ( sampleVector * kernelRadius ); // calculate sample point
+
+				vec4 samplePointNDC = cameraProjectionMatrix * vec4( samplePoint, 1.0 ); // project point and calculate NDC
+				samplePointNDC /= samplePointNDC.w;
+
+				vec2 samplePointUv = samplePointNDC.xy * 0.5 + 0.5; // compute uv coordinates
+
+				float realDepth = getLinearDepth( samplePointUv ); // get linear depth from depth texture
+				float sampleDepth = viewZToOrthographicDepth( samplePoint.z, cameraNear, cameraFar ); // compute linear depth of the sample view Z value
+				float delta = sampleDepth - realDepth;
+
+				if ( delta > minDistance && delta < maxDistance ) { // if fragment is before sample point, increase occlusion
+
+					occlusion += 1.0;
+
+				}
+
+			}
+
+			occlusion = clamp( occlusion / float( KERNEL_SIZE ), 0.0, 1.0 );
+
+			gl_FragColor = vec4( vec3( 1.0 - occlusion ), 1.0 );
+
+		}`
+	};
+	const SSAODepthShader = {
+		defines: {
+			'PERSPECTIVE_CAMERA': 1
+		},
+		uniforms: {
+			'tDepth': {
+				value: null
+			},
+			'cameraNear': {
+				value: null
+			},
+			'cameraFar': {
+				value: null
+			}
+		},
+		vertexShader: `varying vec2 vUv;
+
+		void main() {
+
+			vUv = uv;
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+		}`,
+		fragmentShader: `uniform sampler2D tDepth;
+
+		uniform float cameraNear;
+		uniform float cameraFar;
+
+		varying vec2 vUv;
+
+		#include <packing>
+
+		float getLinearDepth( const in vec2 screenPosition ) {
+
+			#if PERSPECTIVE_CAMERA == 1
+
+				float fragCoordZ = texture2D( tDepth, screenPosition ).x;
+				float viewZ = perspectiveDepthToViewZ( fragCoordZ, cameraNear, cameraFar );
+				return viewZToOrthographicDepth( viewZ, cameraNear, cameraFar );
+
+			#else
+
+				return texture2D( tDepth, screenPosition ).x;
+
+			#endif
+
+		}
+
+		void main() {
+
+			float depth = getLinearDepth( vUv );
+			gl_FragColor = vec4( vec3( 1.0 - depth ), 1.0 );
+
+		}`
+	};
+	const SSAOBlurShader = {
+		uniforms: {
+			'tDiffuse': {
+				value: null
+			},
+			'resolution': {
+				value: new THREE.Vector2()
+			}
+		},
+		vertexShader: `varying vec2 vUv;
+
+		void main() {
+
+			vUv = uv;
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+		}`,
+		fragmentShader: `uniform sampler2D tDiffuse;
+
+		uniform vec2 resolution;
+
+		varying vec2 vUv;
+
+		void main() {
+
+			vec2 texelSize = ( 1.0 / resolution );
+			float result = 0.0;
+
+			for ( int i = - 2; i <= 2; i ++ ) {
+
+				for ( int j = - 2; j <= 2; j ++ ) {
+
+					vec2 offset = ( vec2( float( i ), float( j ) ) ) * texelSize;
+					result += texture2D( tDiffuse, vUv + offset ).r;
+
+				}
+
+			}
+
+			gl_FragColor = vec4( vec3( result / ( 5.0 * 5.0 ) ), 1.0 );
+
+		}`
+	};
+
+	THREE.SSAOBlurShader = SSAOBlurShader;
+	THREE.SSAODepthShader = SSAODepthShader;
+	THREE.SSAOShader = SSAOShader;
+
+} )();
+</script>
+<script>/* three.js examples (MIT) */
+( function () {
+
+	class EffectComposer {
+
+		constructor( renderer, renderTarget ) {
+
+			this.renderer = renderer;
+
+			if ( renderTarget === undefined ) {
+
+				const parameters = {
+					minFilter: THREE.LinearFilter,
+					magFilter: THREE.LinearFilter,
+					format: THREE.RGBAFormat
+				};
+				const size = renderer.getSize( new THREE.Vector2() );
+				this._pixelRatio = renderer.getPixelRatio();
+				this._width = size.width;
+				this._height = size.height;
+				renderTarget = new THREE.WebGLRenderTarget( this._width * this._pixelRatio, this._height * this._pixelRatio, parameters );
+				renderTarget.texture.name = 'EffectComposer.rt1';
+
+			} else {
+
+				this._pixelRatio = 1;
+				this._width = renderTarget.width;
+				this._height = renderTarget.height;
+
+			}
+
+			this.renderTarget1 = renderTarget;
+			this.renderTarget2 = renderTarget.clone();
+			this.renderTarget2.texture.name = 'EffectComposer.rt2';
+			this.writeBuffer = this.renderTarget1;
+			this.readBuffer = this.renderTarget2;
+			this.renderToScreen = true;
+			this.passes = []; // dependencies
+
+			if ( THREE.CopyShader === undefined ) {
+
+				console.error( 'THREE.EffectComposer relies on THREE.CopyShader' );
+
+			}
+
+			if ( THREE.ShaderPass === undefined ) {
+
+				console.error( 'THREE.EffectComposer relies on THREE.ShaderPass' );
+
+			}
+
+			this.copyPass = new THREE.ShaderPass( THREE.CopyShader );
+			this.clock = new THREE.Clock();
+
+		}
+
+		swapBuffers() {
+
+			const tmp = this.readBuffer;
+			this.readBuffer = this.writeBuffer;
+			this.writeBuffer = tmp;
+
+		}
+
+		addPass( pass ) {
+
+			this.passes.push( pass );
+			pass.setSize( this._width * this._pixelRatio, this._height * this._pixelRatio );
+
+		}
+
+		insertPass( pass, index ) {
+
+			this.passes.splice( index, 0, pass );
+			pass.setSize( this._width * this._pixelRatio, this._height * this._pixelRatio );
+
+		}
+
+		removePass( pass ) {
+
+			const index = this.passes.indexOf( pass );
+
+			if ( index !== - 1 ) {
+
+				this.passes.splice( index, 1 );
+
+			}
+
+		}
+
+		isLastEnabledPass( passIndex ) {
+
+			for ( let i = passIndex + 1; i < this.passes.length; i ++ ) {
+
+				if ( this.passes[ i ].enabled ) {
+
+					return false;
+
+				}
+
+			}
+
+			return true;
+
+		}
+
+		render( deltaTime ) {
+
+			// deltaTime value is in seconds
+			if ( deltaTime === undefined ) {
+
+				deltaTime = this.clock.getDelta();
+
+			}
+
+			const currentRenderTarget = this.renderer.getRenderTarget();
+			let maskActive = false;
+
+			for ( let i = 0, il = this.passes.length; i < il; i ++ ) {
+
+				const pass = this.passes[ i ];
+				if ( pass.enabled === false ) continue;
+				pass.renderToScreen = this.renderToScreen && this.isLastEnabledPass( i );
+				pass.render( this.renderer, this.writeBuffer, this.readBuffer, deltaTime, maskActive );
+
+				if ( pass.needsSwap ) {
+
+					if ( maskActive ) {
+
+						const context = this.renderer.getContext();
+						const stencil = this.renderer.state.buffers.stencil; //context.stencilFunc( context.NOTEQUAL, 1, 0xffffffff );
+
+						stencil.setFunc( context.NOTEQUAL, 1, 0xffffffff );
+						this.copyPass.render( this.renderer, this.writeBuffer, this.readBuffer, deltaTime ); //context.stencilFunc( context.EQUAL, 1, 0xffffffff );
+
+						stencil.setFunc( context.EQUAL, 1, 0xffffffff );
+
+					}
+
+					this.swapBuffers();
+
+				}
+
+				if ( THREE.MaskPass !== undefined ) {
+
+					if ( pass instanceof THREE.MaskPass ) {
+
+						maskActive = true;
+
+					} else if ( pass instanceof THREE.ClearMaskPass ) {
+
+						maskActive = false;
+
+					}
+
+				}
+
+			}
+
+			this.renderer.setRenderTarget( currentRenderTarget );
+
+		}
+
+		reset( renderTarget ) {
+
+			if ( renderTarget === undefined ) {
+
+				const size = this.renderer.getSize( new THREE.Vector2() );
+				this._pixelRatio = this.renderer.getPixelRatio();
+				this._width = size.width;
+				this._height = size.height;
+				renderTarget = this.renderTarget1.clone();
+				renderTarget.setSize( this._width * this._pixelRatio, this._height * this._pixelRatio );
+
+			}
+
+			this.renderTarget1.dispose();
+			this.renderTarget2.dispose();
+			this.renderTarget1 = renderTarget;
+			this.renderTarget2 = renderTarget.clone();
+			this.writeBuffer = this.renderTarget1;
+			this.readBuffer = this.renderTarget2;
+
+		}
+
+		setSize( width, height ) {
+
+			this._width = width;
+			this._height = height;
+			const effectiveWidth = this._width * this._pixelRatio;
+			const effectiveHeight = this._height * this._pixelRatio;
+			this.renderTarget1.setSize( effectiveWidth, effectiveHeight );
+			this.renderTarget2.setSize( effectiveWidth, effectiveHeight );
+
+			for ( let i = 0; i < this.passes.length; i ++ ) {
+
+				this.passes[ i ].setSize( effectiveWidth, effectiveHeight );
+
+			}
+
+		}
+
+		setPixelRatio( pixelRatio ) {
+
+			this._pixelRatio = pixelRatio;
+			this.setSize( this._width, this._height );
+
+		}
+
+	}
+
+	class Pass {
+
+		constructor() {
+
+			// if set to true, the pass is processed by the composer
+			this.enabled = true; // if set to true, the pass indicates to swap read and write buffer after rendering
+
+			this.needsSwap = true; // if set to true, the pass clears its buffer before rendering
+
+			this.clear = false; // if set to true, the result of the pass is rendered to screen. This is set automatically by EffectComposer.
+
+			this.renderToScreen = false;
+
+		}
+
+		setSize( ) {}
+
+		render( ) {
+
+			console.error( 'THREE.Pass: .render() must be implemented in derived pass.' );
+
+		}
+
+	} // Helper for passes that need to fill the viewport with a single quad.
+
+
+	const _camera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 ); // https://github.com/mrdoob/three.js/pull/21358
+
+
+	const _geometry = new THREE.BufferGeometry();
+
+	_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [ - 1, 3, 0, - 1, - 1, 0, 3, - 1, 0 ], 3 ) );
+
+	_geometry.setAttribute( 'uv', new THREE.Float32BufferAttribute( [ 0, 2, 0, 0, 2, 0 ], 2 ) );
+
+	class FullScreenQuad {
+
+		constructor( material ) {
+
+			this._mesh = new THREE.Mesh( _geometry, material );
+
+		}
+
+		dispose() {
+
+			this._mesh.geometry.dispose();
+
+		}
+
+		render( renderer ) {
+
+			renderer.render( this._mesh, _camera );
+
+		}
+
+		get material() {
+
+			return this._mesh.material;
+
+		}
+
+		set material( value ) {
+
+			this._mesh.material = value;
+
+		}
+
+	}
+
+	THREE.EffectComposer = EffectComposer;
+	THREE.FullScreenQuad = FullScreenQuad;
+	THREE.Pass = Pass;
+
+} )();
+</script>
+<script>/* three.js examples (MIT) */
+( function () {
+
+	class Pass {
+
+		constructor() {
+
+			// if set to true, the pass is processed by the composer
+			this.enabled = true; // if set to true, the pass indicates to swap read and write buffer after rendering
+
+			this.needsSwap = true; // if set to true, the pass clears its buffer before rendering
+
+			this.clear = false; // if set to true, the result of the pass is rendered to screen. This is set automatically by EffectComposer.
+
+			this.renderToScreen = false;
+
+		}
+
+		setSize( ) {}
+
+		render( ) {
+
+			console.error( 'THREE.Pass: .render() must be implemented in derived pass.' );
+
+		}
+
+	} // Helper for passes that need to fill the viewport with a single quad.
+
+
+	const _camera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 ); // https://github.com/mrdoob/three.js/pull/21358
+
+
+	const _geometry = new THREE.BufferGeometry();
+
+	_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [ - 1, 3, 0, - 1, - 1, 0, 3, - 1, 0 ], 3 ) );
+
+	_geometry.setAttribute( 'uv', new THREE.Float32BufferAttribute( [ 0, 2, 0, 0, 2, 0 ], 2 ) );
+
+	class FullScreenQuad {
+
+		constructor( material ) {
+
+			this._mesh = new THREE.Mesh( _geometry, material );
+
+		}
+
+		dispose() {
+
+			this._mesh.geometry.dispose();
+
+		}
+
+		render( renderer ) {
+
+			renderer.render( this._mesh, _camera );
+
+		}
+
+		get material() {
+
+			return this._mesh.material;
+
+		}
+
+		set material( value ) {
+
+			this._mesh.material = value;
+
+		}
+
+	}
+
+	THREE.FullScreenQuad = FullScreenQuad;
+	THREE.Pass = Pass;
+
+} )();
+</script>
+<script>/* three.js examples (MIT) */
+( function () {
+
+	class MaskPass extends THREE.Pass {
+
+		constructor( scene, camera ) {
+
+			super();
+			this.scene = scene;
+			this.camera = camera;
+			this.clear = true;
+			this.needsSwap = false;
+			this.inverse = false;
+
+		}
+
+		render( renderer, writeBuffer, readBuffer
+			/*, deltaTime, maskActive */
+		) {
+
+			const context = renderer.getContext();
+			const state = renderer.state; // don't update color or depth
+
+			state.buffers.color.setMask( false );
+			state.buffers.depth.setMask( false ); // lock buffers
+
+			state.buffers.color.setLocked( true );
+			state.buffers.depth.setLocked( true ); // set up stencil
+
+			let writeValue, clearValue;
+
+			if ( this.inverse ) {
+
+				writeValue = 0;
+				clearValue = 1;
+
+			} else {
+
+				writeValue = 1;
+				clearValue = 0;
+
+			}
+
+			state.buffers.stencil.setTest( true );
+			state.buffers.stencil.setOp( context.REPLACE, context.REPLACE, context.REPLACE );
+			state.buffers.stencil.setFunc( context.ALWAYS, writeValue, 0xffffffff );
+			state.buffers.stencil.setClear( clearValue );
+			state.buffers.stencil.setLocked( true ); // draw into the stencil buffer
+
+			renderer.setRenderTarget( readBuffer );
+			if ( this.clear ) renderer.clear();
+			renderer.render( this.scene, this.camera );
+			renderer.setRenderTarget( writeBuffer );
+			if ( this.clear ) renderer.clear();
+			renderer.render( this.scene, this.camera ); // unlock color and depth buffer for subsequent rendering
+
+			state.buffers.color.setLocked( false );
+			state.buffers.depth.setLocked( false ); // only render where stencil is set to 1
+
+			state.buffers.stencil.setLocked( false );
+			state.buffers.stencil.setFunc( context.EQUAL, 1, 0xffffffff ); // draw if == 1
+
+			state.buffers.stencil.setOp( context.KEEP, context.KEEP, context.KEEP );
+			state.buffers.stencil.setLocked( true );
+
+		}
+
+	}
+
+	class ClearMaskPass extends THREE.Pass {
+
+		constructor() {
+
+			super();
+			this.needsSwap = false;
+
+		}
+
+		render( renderer
+			/*, writeBuffer, readBuffer, deltaTime, maskActive */
+		) {
+
+			renderer.state.buffers.stencil.setLocked( false );
+			renderer.state.buffers.stencil.setTest( false );
+
+		}
+
+	}
+
+	THREE.ClearMaskPass = ClearMaskPass;
+	THREE.MaskPass = MaskPass;
+
+} )();
+</script>
+<script>/* three.js examples (MIT) */
+( function () {
+
+	class RenderPass extends THREE.Pass {
+
+		constructor( scene, camera, overrideMaterial, clearColor, clearAlpha ) {
+
+			super();
+			this.scene = scene;
+			this.camera = camera;
+			this.overrideMaterial = overrideMaterial;
+			this.clearColor = clearColor;
+			this.clearAlpha = clearAlpha !== undefined ? clearAlpha : 0;
+			this.clear = true;
+			this.clearDepth = false;
+			this.needsSwap = false;
+			this._oldClearColor = new THREE.Color();
+
+		}
+
+		render( renderer, writeBuffer, readBuffer
+			/*, deltaTime, maskActive */
+		) {
+
+			const oldAutoClear = renderer.autoClear;
+			renderer.autoClear = false;
+			let oldClearAlpha, oldOverrideMaterial;
+
+			if ( this.overrideMaterial !== undefined ) {
+
+				oldOverrideMaterial = this.scene.overrideMaterial;
+				this.scene.overrideMaterial = this.overrideMaterial;
+
+			}
+
+			if ( this.clearColor ) {
+
+				renderer.getClearColor( this._oldClearColor );
+				oldClearAlpha = renderer.getClearAlpha();
+				renderer.setClearColor( this.clearColor, this.clearAlpha );
+
+			}
+
+			if ( this.clearDepth ) {
+
+				renderer.clearDepth();
+
+			}
+
+			renderer.setRenderTarget( this.renderToScreen ? null : readBuffer ); // TODO: Avoid using autoClear properties, see https://github.com/mrdoob/three.js/pull/15571#issuecomment-465669600
+
+			if ( this.clear ) renderer.clear( renderer.autoClearColor, renderer.autoClearDepth, renderer.autoClearStencil );
+			renderer.render( this.scene, this.camera );
+
+			if ( this.clearColor ) {
+
+				renderer.setClearColor( this._oldClearColor, oldClearAlpha );
+
+			}
+
+			if ( this.overrideMaterial !== undefined ) {
+
+				this.scene.overrideMaterial = oldOverrideMaterial;
+
+			}
+
+			renderer.autoClear = oldAutoClear;
+
+		}
+
+	}
+
+	THREE.RenderPass = RenderPass;
+
+} )();
+</script>
+<script>/* three.js examples (MIT) */
+( function () {
+
+	class ShaderPass extends THREE.Pass {
+
+		constructor( shader, textureID ) {
+
+			super();
+			this.textureID = textureID !== undefined ? textureID : 'tDiffuse';
+
+			if ( shader instanceof THREE.ShaderMaterial ) {
+
+				this.uniforms = shader.uniforms;
+				this.material = shader;
+
+			} else if ( shader ) {
+
+				this.uniforms = THREE.UniformsUtils.clone( shader.uniforms );
+				this.material = new THREE.ShaderMaterial( {
+					defines: Object.assign( {}, shader.defines ),
+					uniforms: this.uniforms,
+					vertexShader: shader.vertexShader,
+					fragmentShader: shader.fragmentShader
+				} );
+
+			}
+
+			this.fsQuad = new THREE.FullScreenQuad( this.material );
+
+		}
+
+		render( renderer, writeBuffer, readBuffer
+			/*, deltaTime, maskActive */
+		) {
+
+			if ( this.uniforms[ this.textureID ] ) {
+
+				this.uniforms[ this.textureID ].value = readBuffer.texture;
+
+			}
+
+			this.fsQuad.material = this.material;
+
+			if ( this.renderToScreen ) {
+
+				renderer.setRenderTarget( null );
+				this.fsQuad.render( renderer );
+
+			} else {
+
+				renderer.setRenderTarget( writeBuffer ); // TODO: Avoid using autoClear properties, see https://github.com/mrdoob/three.js/pull/15571#issuecomment-465669600
+
+				if ( this.clear ) renderer.clear( renderer.autoClearColor, renderer.autoClearDepth, renderer.autoClearStencil );
+				this.fsQuad.render( renderer );
+
+			}
+
+		}
+
+	}
+
+	THREE.ShaderPass = ShaderPass;
+
+} )();
+</script>
+<script>/* three.js examples (MIT) */
+( function () {
+
+	class SSAOPass extends THREE.Pass {
+
+		constructor( scene, camera, width, height ) {
+
+			super();
+			this.width = width !== undefined ? width : 512;
+			this.height = height !== undefined ? height : 512;
+			this.clear = true;
+			this.camera = camera;
+			this.scene = scene;
+			this.kernelRadius = 8;
+			this.kernelSize = 32;
+			this.kernel = [];
+			this.noiseTexture = null;
+			this.output = 0;
+			this.minDistance = 0.005;
+			this.maxDistance = 0.1;
+			this._visibilityCache = new Map(); //
+
+			this.generateSampleKernel();
+			this.generateRandomKernelRotations(); // beauty render target
+
+			const depthTexture = new THREE.DepthTexture();
+			depthTexture.type = THREE.UnsignedShortType;
+			this.beautyRenderTarget = new THREE.WebGLRenderTarget( this.width, this.height, {
+				minFilter: THREE.LinearFilter,
+				magFilter: THREE.LinearFilter,
+				format: THREE.RGBAFormat
+			} ); // normal render target with depth buffer
+
+			this.normalRenderTarget = new THREE.WebGLRenderTarget( this.width, this.height, {
+				minFilter: THREE.NearestFilter,
+				magFilter: THREE.NearestFilter,
+				format: THREE.RGBAFormat,
+				depthTexture: depthTexture
+			} ); // ssao render target
+
+			this.ssaoRenderTarget = new THREE.WebGLRenderTarget( this.width, this.height, {
+				minFilter: THREE.LinearFilter,
+				magFilter: THREE.LinearFilter,
+				format: THREE.RGBAFormat
+			} );
+			this.blurRenderTarget = this.ssaoRenderTarget.clone(); // ssao material
+
+			if ( THREE.SSAOShader === undefined ) {
+
+				console.error( 'THREE.SSAOPass: The pass relies on THREE.SSAOShader.' );
+
+			}
+
+			this.ssaoMaterial = new THREE.ShaderMaterial( {
+				defines: Object.assign( {}, THREE.SSAOShader.defines ),
+				uniforms: THREE.UniformsUtils.clone( THREE.SSAOShader.uniforms ),
+				vertexShader: THREE.SSAOShader.vertexShader,
+				fragmentShader: THREE.SSAOShader.fragmentShader,
+				blending: THREE.NoBlending
+			} );
+			this.ssaoMaterial.uniforms[ 'tDiffuse' ].value = this.beautyRenderTarget.texture;
+			this.ssaoMaterial.uniforms[ 'tNormal' ].value = this.normalRenderTarget.texture;
+			this.ssaoMaterial.uniforms[ 'tDepth' ].value = this.normalRenderTarget.depthTexture;
+			this.ssaoMaterial.uniforms[ 'tNoise' ].value = this.noiseTexture;
+			this.ssaoMaterial.uniforms[ 'kernel' ].value = this.kernel;
+			this.ssaoMaterial.uniforms[ 'cameraNear' ].value = this.camera.near;
+			this.ssaoMaterial.uniforms[ 'cameraFar' ].value = this.camera.far;
+			this.ssaoMaterial.uniforms[ 'resolution' ].value.set( this.width, this.height );
+			this.ssaoMaterial.uniforms[ 'cameraProjectionMatrix' ].value.copy( this.camera.projectionMatrix );
+			this.ssaoMaterial.uniforms[ 'cameraInverseProjectionMatrix' ].value.copy( this.camera.projectionMatrixInverse ); // normal material
+
+			this.normalMaterial = new THREE.MeshNormalMaterial();
+			this.normalMaterial.blending = THREE.NoBlending; // blur material
+
+			this.blurMaterial = new THREE.ShaderMaterial( {
+				defines: Object.assign( {}, THREE.SSAOBlurShader.defines ),
+				uniforms: THREE.UniformsUtils.clone( THREE.SSAOBlurShader.uniforms ),
+				vertexShader: THREE.SSAOBlurShader.vertexShader,
+				fragmentShader: THREE.SSAOBlurShader.fragmentShader
+			} );
+			this.blurMaterial.uniforms[ 'tDiffuse' ].value = this.ssaoRenderTarget.texture;
+			this.blurMaterial.uniforms[ 'resolution' ].value.set( this.width, this.height ); // material for rendering the depth
+
+			this.depthRenderMaterial = new THREE.ShaderMaterial( {
+				defines: Object.assign( {}, THREE.SSAODepthShader.defines ),
+				uniforms: THREE.UniformsUtils.clone( THREE.SSAODepthShader.uniforms ),
+				vertexShader: THREE.SSAODepthShader.vertexShader,
+				fragmentShader: THREE.SSAODepthShader.fragmentShader,
+				blending: THREE.NoBlending
+			} );
+			this.depthRenderMaterial.uniforms[ 'tDepth' ].value = this.normalRenderTarget.depthTexture;
+			this.depthRenderMaterial.uniforms[ 'cameraNear' ].value = this.camera.near;
+			this.depthRenderMaterial.uniforms[ 'cameraFar' ].value = this.camera.far; // material for rendering the content of a render target
+
+			this.copyMaterial = new THREE.ShaderMaterial( {
+				uniforms: THREE.UniformsUtils.clone( THREE.CopyShader.uniforms ),
+				vertexShader: THREE.CopyShader.vertexShader,
+				fragmentShader: THREE.CopyShader.fragmentShader,
+				transparent: true,
+				depthTest: false,
+				depthWrite: false,
+				blendSrc: THREE.DstColorFactor,
+				blendDst: THREE.ZeroFactor,
+				blendEquation: THREE.AddEquation,
+				blendSrcAlpha: THREE.DstAlphaFactor,
+				blendDstAlpha: THREE.ZeroFactor,
+				blendEquationAlpha: THREE.AddEquation
+			} );
+			this.fsQuad = new THREE.FullScreenQuad( null );
+			this.originalClearColor = new THREE.Color();
+
+		}
+
+		dispose() {
+
+			// dispose render targets
+			this.beautyRenderTarget.dispose();
+			this.normalRenderTarget.dispose();
+			this.ssaoRenderTarget.dispose();
+			this.blurRenderTarget.dispose(); // dispose materials
+
+			this.normalMaterial.dispose();
+			this.blurMaterial.dispose();
+			this.copyMaterial.dispose();
+			this.depthRenderMaterial.dispose(); // dipsose full screen quad
+
+			this.fsQuad.dispose();
+
+		}
+
+		render( renderer, writeBuffer
+			/*, readBuffer, deltaTime, maskActive */
+		) {
+
+			// render beauty
+			renderer.setRenderTarget( this.beautyRenderTarget );
+			renderer.clear();
+			renderer.render( this.scene, this.camera ); // render normals and depth (honor only meshes, points and lines do not contribute to SSAO)
+
+			this.overrideVisibility();
+			this.renderOverride( renderer, this.normalMaterial, this.normalRenderTarget, 0x7777ff, 1.0 );
+			this.restoreVisibility(); // render SSAO
+
+			this.ssaoMaterial.uniforms[ 'kernelRadius' ].value = this.kernelRadius;
+			this.ssaoMaterial.uniforms[ 'minDistance' ].value = this.minDistance;
+			this.ssaoMaterial.uniforms[ 'maxDistance' ].value = this.maxDistance;
+			this.renderPass( renderer, this.ssaoMaterial, this.ssaoRenderTarget ); // render blur
+
+			this.renderPass( renderer, this.blurMaterial, this.blurRenderTarget ); // output result to screen
+
+			switch ( this.output ) {
+
+				case SSAOPass.OUTPUT.SSAO:
+					this.copyMaterial.uniforms[ 'tDiffuse' ].value = this.ssaoRenderTarget.texture;
+					this.copyMaterial.blending = THREE.NoBlending;
+					this.renderPass( renderer, this.copyMaterial, this.renderToScreen ? null : writeBuffer );
+					break;
+
+				case SSAOPass.OUTPUT.Blur:
+					this.copyMaterial.uniforms[ 'tDiffuse' ].value = this.blurRenderTarget.texture;
+					this.copyMaterial.blending = THREE.NoBlending;
+					this.renderPass( renderer, this.copyMaterial, this.renderToScreen ? null : writeBuffer );
+					break;
+
+				case SSAOPass.OUTPUT.Beauty:
+					this.copyMaterial.uniforms[ 'tDiffuse' ].value = this.beautyRenderTarget.texture;
+					this.copyMaterial.blending = THREE.NoBlending;
+					this.renderPass( renderer, this.copyMaterial, this.renderToScreen ? null : writeBuffer );
+					break;
+
+				case SSAOPass.OUTPUT.Depth:
+					this.renderPass( renderer, this.depthRenderMaterial, this.renderToScreen ? null : writeBuffer );
+					break;
+
+				case SSAOPass.OUTPUT.Normal:
+					this.copyMaterial.uniforms[ 'tDiffuse' ].value = this.normalRenderTarget.texture;
+					this.copyMaterial.blending = THREE.NoBlending;
+					this.renderPass( renderer, this.copyMaterial, this.renderToScreen ? null : writeBuffer );
+					break;
+
+				case SSAOPass.OUTPUT.Default:
+					this.copyMaterial.uniforms[ 'tDiffuse' ].value = this.beautyRenderTarget.texture;
+					this.copyMaterial.blending = THREE.NoBlending;
+					this.renderPass( renderer, this.copyMaterial, this.renderToScreen ? null : writeBuffer );
+					this.copyMaterial.uniforms[ 'tDiffuse' ].value = this.blurRenderTarget.texture;
+					this.copyMaterial.blending = THREE.CustomBlending;
+					this.renderPass( renderer, this.copyMaterial, this.renderToScreen ? null : writeBuffer );
+					break;
+
+				default:
+					console.warn( 'THREE.SSAOPass: Unknown output type.' );
+
+			}
+
+		}
+
+		renderPass( renderer, passMaterial, renderTarget, clearColor, clearAlpha ) {
+
+			// save original state
+			renderer.getClearColor( this.originalClearColor );
+			const originalClearAlpha = renderer.getClearAlpha();
+			const originalAutoClear = renderer.autoClear;
+			renderer.setRenderTarget( renderTarget ); // setup pass state
+
+			renderer.autoClear = false;
+
+			if ( clearColor !== undefined && clearColor !== null ) {
+
+				renderer.setClearColor( clearColor );
+				renderer.setClearAlpha( clearAlpha || 0.0 );
+				renderer.clear();
+
+			}
+
+			this.fsQuad.material = passMaterial;
+			this.fsQuad.render( renderer ); // restore original state
+
+			renderer.autoClear = originalAutoClear;
+			renderer.setClearColor( this.originalClearColor );
+			renderer.setClearAlpha( originalClearAlpha );
+
+		}
+
+		renderOverride( renderer, overrideMaterial, renderTarget, clearColor, clearAlpha ) {
+
+			renderer.getClearColor( this.originalClearColor );
+			const originalClearAlpha = renderer.getClearAlpha();
+			const originalAutoClear = renderer.autoClear;
+			renderer.setRenderTarget( renderTarget );
+			renderer.autoClear = false;
+			clearColor = overrideMaterial.clearColor || clearColor;
+			clearAlpha = overrideMaterial.clearAlpha || clearAlpha;
+
+			if ( clearColor !== undefined && clearColor !== null ) {
+
+				renderer.setClearColor( clearColor );
+				renderer.setClearAlpha( clearAlpha || 0.0 );
+				renderer.clear();
+
+			}
+
+			this.scene.overrideMaterial = overrideMaterial;
+			renderer.render( this.scene, this.camera );
+			this.scene.overrideMaterial = null; // restore original state
+
+			renderer.autoClear = originalAutoClear;
+			renderer.setClearColor( this.originalClearColor );
+			renderer.setClearAlpha( originalClearAlpha );
+
+		}
+
+		setSize( width, height ) {
+
+			this.width = width;
+			this.height = height;
+			this.beautyRenderTarget.setSize( width, height );
+			this.ssaoRenderTarget.setSize( width, height );
+			this.normalRenderTarget.setSize( width, height );
+			this.blurRenderTarget.setSize( width, height );
+			this.ssaoMaterial.uniforms[ 'resolution' ].value.set( width, height );
+			this.ssaoMaterial.uniforms[ 'cameraProjectionMatrix' ].value.copy( this.camera.projectionMatrix );
+			this.ssaoMaterial.uniforms[ 'cameraInverseProjectionMatrix' ].value.copy( this.camera.projectionMatrixInverse );
+			this.blurMaterial.uniforms[ 'resolution' ].value.set( width, height );
+
+		}
+
+		generateSampleKernel() {
+
+			const kernelSize = this.kernelSize;
+			const kernel = this.kernel;
+
+			for ( let i = 0; i < kernelSize; i ++ ) {
+
+				const sample = new THREE.Vector3();
+				sample.x = Math.random() * 2 - 1;
+				sample.y = Math.random() * 2 - 1;
+				sample.z = Math.random();
+				sample.normalize();
+				let scale = i / kernelSize;
+				scale = THREE.MathUtils.lerp( 0.1, 1, scale * scale );
+				sample.multiplyScalar( scale );
+				kernel.push( sample );
+
+			}
+
+		}
+
+		generateRandomKernelRotations() {
+
+			const width = 4,
+				height = 4;
+
+			if ( THREE.SimplexNoise === undefined ) {
+
+				console.error( 'THREE.SSAOPass: The pass relies on THREE.SimplexNoise.' );
+
+			}
+
+			const simplex = new THREE.SimplexNoise();
+			const size = width * height;
+			const data = new Float32Array( size * 4 );
+
+			for ( let i = 0; i < size; i ++ ) {
+
+				const stride = i * 4;
+				const x = Math.random() * 2 - 1;
+				const y = Math.random() * 2 - 1;
+				const z = 0;
+				const noise = simplex.noise3d( x, y, z );
+				data[ stride ] = noise;
+				data[ stride + 1 ] = noise;
+				data[ stride + 2 ] = noise;
+				data[ stride + 3 ] = 1;
+
+			}
+
+			this.noiseTexture = new THREE.DataTexture( data, width, height, THREE.RGBAFormat, THREE.FloatType );
+			this.noiseTexture.wrapS = THREE.RepeatWrapping;
+			this.noiseTexture.wrapT = THREE.RepeatWrapping;
+
+		}
+
+		overrideVisibility() {
+
+			const scene = this.scene;
+			const cache = this._visibilityCache;
+			scene.traverse( function ( object ) {
+
+				cache.set( object, object.visible );
+				if ( object.isPoints || object.isLine ) object.visible = false;
+
+			} );
+
+		}
+
+		restoreVisibility() {
+
+			const scene = this.scene;
+			const cache = this._visibilityCache;
+			scene.traverse( function ( object ) {
+
+				const visible = cache.get( object );
+				object.visible = visible;
+
+			} );
+			cache.clear();
+
+		}
+
+	}
+
+	SSAOPass.OUTPUT = {
+		'Default': 0,
+		'SSAO': 1,
+		'Blur': 2,
+		'Beauty': 3,
+		'Depth': 4,
+		'Normal': 5
+	};
+
+	THREE.SSAOPass = SSAOPass;
+
+} )();
+</script>
+<script>/* three.js examples (MIT) */
+( function () {
+
+	/**
+ * https://github.com/google/model-viewer/blob/master/packages/model-viewer/src/three-components/EnvironmentScene.ts
+ */
+
+	class RoomEnvironment extends THREE.Scene {
+
+		constructor() {
+
+			super();
+			const geometry = new THREE.BoxGeometry();
+			geometry.deleteAttribute( 'uv' );
+			const roomMaterial = new THREE.MeshStandardMaterial( {
+				side: THREE.BackSide
+			} );
+			const boxMaterial = new THREE.MeshStandardMaterial();
+			const mainLight = new THREE.PointLight( 0xffffff, 5.0, 28, 2 );
+			mainLight.position.set( 0.418, 16.199, 0.300 );
+			this.add( mainLight );
+			const room = new THREE.Mesh( geometry, roomMaterial );
+			room.position.set( - 0.757, 13.219, 0.717 );
+			room.scale.set( 31.713, 28.305, 28.591 );
+			this.add( room );
+			const box1 = new THREE.Mesh( geometry, boxMaterial );
+			box1.position.set( - 10.906, 2.009, 1.846 );
+			box1.rotation.set( 0, - 0.195, 0 );
+			box1.scale.set( 2.328, 7.905, 4.651 );
+			this.add( box1 );
+			const box2 = new THREE.Mesh( geometry, boxMaterial );
+			box2.position.set( - 5.607, - 0.754, - 0.758 );
+			box2.rotation.set( 0, 0.994, 0 );
+			box2.scale.set( 1.970, 1.534, 3.955 );
+			this.add( box2 );
+			const box3 = new THREE.Mesh( geometry, boxMaterial );
+			box3.position.set( 6.167, 0.857, 7.803 );
+			box3.rotation.set( 0, 0.561, 0 );
+			box3.scale.set( 3.927, 6.285, 3.687 );
+			this.add( box3 );
+			const box4 = new THREE.Mesh( geometry, boxMaterial );
+			box4.position.set( - 2.017, 0.018, 6.124 );
+			box4.rotation.set( 0, 0.333, 0 );
+			box4.scale.set( 2.002, 4.566, 2.064 );
+			this.add( box4 );
+			const box5 = new THREE.Mesh( geometry, boxMaterial );
+			box5.position.set( 2.291, - 0.756, - 2.621 );
+			box5.rotation.set( 0, - 0.286, 0 );
+			box5.scale.set( 1.546, 1.552, 1.496 );
+			this.add( box5 );
+			const box6 = new THREE.Mesh( geometry, boxMaterial );
+			box6.position.set( - 2.193, - 0.369, - 5.547 );
+			box6.rotation.set( 0, 0.516, 0 );
+			box6.scale.set( 3.875, 3.487, 2.986 );
+			this.add( box6 ); // -x right
+
+			const light1 = new THREE.Mesh( geometry, createAreaLightMaterial( 50 ) );
+			light1.position.set( - 16.116, 14.37, 8.208 );
+			light1.scale.set( 0.1, 2.428, 2.739 );
+			this.add( light1 ); // -x left
+
+			const light2 = new THREE.Mesh( geometry, createAreaLightMaterial( 50 ) );
+			light2.position.set( - 16.109, 18.021, - 8.207 );
+			light2.scale.set( 0.1, 2.425, 2.751 );
+			this.add( light2 ); // +x
+
+			const light3 = new THREE.Mesh( geometry, createAreaLightMaterial( 17 ) );
+			light3.position.set( 14.904, 12.198, - 1.832 );
+			light3.scale.set( 0.15, 4.265, 6.331 );
+			this.add( light3 ); // +z
+
+			const light4 = new THREE.Mesh( geometry, createAreaLightMaterial( 43 ) );
+			light4.position.set( - 0.462, 8.89, 14.520 );
+			light4.scale.set( 4.38, 5.441, 0.088 );
+			this.add( light4 ); // -z
+
+			const light5 = new THREE.Mesh( geometry, createAreaLightMaterial( 20 ) );
+			light5.position.set( 3.235, 11.486, - 12.541 );
+			light5.scale.set( 2.5, 2.0, 0.1 );
+			this.add( light5 ); // +y
+
+			const light6 = new THREE.Mesh( geometry, createAreaLightMaterial( 100 ) );
+			light6.position.set( 0.0, 20.0, 0.0 );
+			light6.scale.set( 1.0, 0.1, 1.0 );
+			this.add( light6 );
+
+		}
+
+	}
+
+	function createAreaLightMaterial( intensity ) {
+
+		const material = new THREE.MeshBasicMaterial();
+		material.color.setScalar( intensity );
+		return material;
+
+	}
+
+	THREE.RoomEnvironment = RoomEnvironment;
+
+} )();
+</script>
 <script>
 /* ===================== Villa Anna · Casa Modelo Premium =====================
    Planta: Layout R03 (Ana Julia I. Sanchez, abr/2025) — lote 10 × 20 m, x = largura (0 = divisa esquerda), z = profundidade (0 = fundo, 20 = frente/rua).
@@ -1625,8 +4618,18 @@ piso(5.05,15.09,8.5,15.6,0.05,M.paver,1.6);
 FASE = 4;
 { const sebe = (x0,z0,x1,z1,h)=>B(x0,z0,x1,z1,0,h,M.folha); sebe(4.95,16.2,5.35,19.2,1.1); sebe(9.45,15.3,9.85,19.2,1.1); sebe(5.4,15.15,8.4,15.45,0.55); }
 // árvore de rua (tronco claro, como nas imagens) e vasos
-const arvoreRua = (x,z,par=casa)=>{ const g = new THREE.Group(); g.position.set(x,0,z); par.add(g); cil(0.08,2.6,0,1.3,0,ms({color:0xdcd5c8, roughness:0.9}),g,8,0.12);
-  for(let k=0;k<14;k++){ const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55,1), k%2 ? M.folha2 : ms({color:0x7aa04a, roughness:0.9})); f.position.set((rnd()-.5)*1.3, 2.4+rnd()*1.4, (rnd()-.5)*1.3); f.scale.setScalar(0.7+rnd()*0.5); g.add(f); } g.userData.fase = 4; g.userData.cats = []; g.traverse(o=>{ if(o.isMesh){ o.castShadow = true; } }); return g; };
+const folhaTx = tex(256,256,(x,W,H)=>{ x.clearRect(0,0,W,H); const cs = ['#6f9d48','#80ad55','#8fbb5e','#5f8e3e','#9cc66a','#76a44d'];
+  for(let k=0;k<150;k++){ const px = 20+rnd()*(W-40), py = 20+rnd()*(H-40), a = rnd()*Math.PI*2, l = 10+rnd()*12; x.save(); x.translate(px,py); x.rotate(a); x.fillStyle = cs[k%cs.length];
+    x.beginPath(); x.moveTo(-l,0); x.quadraticCurveTo(0,-l*0.45,l,0); x.quadraticCurveTo(0,l*0.45,-l,0); x.fill(); x.restore(); } });
+const mFolhaCard = new THREE.MeshStandardMaterial({map:folhaTx, alphaTest:0.4, side:THREE.DoubleSide, roughness:0.85});
+const mCopaInt = ms({color:0x6a9a45, roughness:0.95}), mTronco = ms({color:0xcfc6b6, roughness:0.9});
+const arvoreRua = (x,z,par=casa)=>{ const g = new THREE.Group(); g.position.set(x,0,z); g.rotation.y = rnd()*Math.PI*2; par.add(g);
+  cil(0.07,2.3,0,1.15,0,mTronco,g,10,0.13);
+  [[0.5,0.0],[-0.45,2.1],[0.35,4.2]].forEach(([inc,a])=>{ const b = new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.06,1.2,7), mTronco); b.position.set(Math.cos(a)*0.28, 2.55, Math.sin(a)*0.28); b.rotation.set(Math.sin(a)*0.75, 0, -Math.cos(a)*0.75); g.add(b); });
+  const card = new THREE.PlaneGeometry(1.15,1.15);
+  for(let k=0;k<95;k++){ const t = rnd()*Math.PI*2, u = rnd()*2-1, r = 0.25 + Math.sqrt(rnd())*1.05, sq = Math.sqrt(1-u*u); const c = new THREE.Mesh(card, mFolhaCard);
+    c.position.set(Math.cos(t)*sq*r*1.35, 3.25 + u*r*0.95, Math.sin(t)*sq*r*1.35); c.rotation.set(rnd()*Math.PI, rnd()*Math.PI, rnd()*Math.PI); c.userData.semContorno = true; g.add(c); }
+  g.userData.fase = 4; g.userData.cats = []; g.traverse(o=>{ if(o.isMesh){ o.castShadow = true; } }); return g; };
 arvoreRua(7.3,21.9);
 // ---- entorno (não entra na animação de obra)
 const entorno = new THREE.Group(); scene.add(entorno);
@@ -1638,12 +4641,38 @@ E(-25,29.45,35,29.6,0,0.15,M.cinza); { const c = M.calc.clone(); c.map = c.map.c
 E(-60,-40,90,80,-0.32,-0.3,M.grama);
 [-2.7,7.3,17.3,-12.7].forEach(x=>{ if(x!==7.3) arvoreRua(x,21.9,entorno); }); [-7,3,13,23].forEach(x=>arvoreRua(x,30.4,entorno));
 // casas vizinhas (volumetria simples) dos dois lados e do outro lado da rua
-const vizinha = (x0,z0,esp)=>{ const g = new THREE.Group(); g.position.set(x0,0,z0); if(esp) g.scale.z = -1; entorno.add(g);
-  const P = (a,b,c,d,y0,y1,m)=>B(a,b,c,d,y0,y1,m,g);
-  P(0,3.3,5,12,0,3.0,M.externa); P(5.05,2.4,8.5,15.1,0,2.9,M.externa); P(0,12,0.15,16.0,0,3.3,M.externa); uvM(P(-0.04,15.05,0.16,16.05,0,2.72,M.pedraExt),1.1); uvM(P(5.05,15.09,8.5,15.11,0,2.9,M.tijoloFach),0.6);
-  P(5.05,15.09,10,20,0,0.03,M.grama); P(0,12,4.9,20,0,0.06,M.paver); P(9.85,0,10,15,0,2,M.muro); P(0,0,10,0.15,0,2,M.muro); P(0.15,0.15,9.85,3.3,0,0.03,M.grama);
-  const ag = (xa,ya,xb,yb,z0,z1)=>{ const L = Math.hypot(xb-xa,yb-ya), o = new THREE.Mesh(new THREE.BoxGeometry(L,0.12,z1-z0), M.telha); o.position.set((xa+xb)/2,(ya+yb)/2,(z0+z1)/2); o.rotation.z = Math.atan2(yb-ya,xb-xa); o.castShadow = true; g.add(o); };
-  ag(-0.05,3.48,5.65,5.53,2.44,12.8); P(-0.05,12.0,4.95,16.75,2.73,2.95,M.metal); P(-0.05,16.7,4.95,16.78,2.3,2.85,M.preto); ag(4.75,4.39,9.35,2.73,1.38,15.89); P(4.9,2.2,5.05,15.1,2.9,4.3,M.externa);
+const prisma = (pts, z0, z1, m, par)=>{ const sh = new THREE.Shape(); pts.forEach(([x,y],i)=>i ? sh.lineTo(x,y) : sh.moveTo(x,y)); const o = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, {depth:z1-z0, bevelEnabled:false}), m); o.position.z = z0; par.add(o); return o; };
+const CORES_CARRO = [0xf2f2f0, 0x2b2e33, 0x9aa1a8, 0x7a1f24, 0x2f4a6b, 0xc9c2b4, 0x5b5f63, 0xe8e6e1];
+function carro(cor){ const g = new THREE.Group(), L = 4.3, Wd = 1.78;
+  const sh = new THREE.Shape(); [[0,0.3],[0,0.76],[0.22,0.86],[1.05,0.93],[1.66,1.37],[2.95,1.4],[3.55,0.98],[4.3,0.86],[4.3,0.3]].forEach(([a,b],i)=>i ? sh.lineTo(a,b) : sh.moveTo(a,b));
+  const geo = new THREE.ExtrudeGeometry(sh, {depth:Wd, bevelEnabled:true, bevelThickness:0.05, bevelSize:0.05, bevelSegments:2}); geo.translate(-L/2, 0, -Wd/2); geo.rotateY(-Math.PI/2);
+  const corpo = new THREE.Mesh(geo, ms({color:cor, roughness:0.35, metalness:0.45})); g.add(corpo);
+  const vs = new THREE.Shape(); [[1.12,0.94],[1.68,1.33],[2.92,1.36],[3.47,0.99]].forEach(([a,b],i)=>i ? vs.lineTo(a,b) : vs.moveTo(a,b)); vs.closePath();
+  const vg = new THREE.ExtrudeGeometry(vs, {depth:Wd+0.11, bevelEnabled:false}); vg.translate(-L/2, 0.01, -(Wd+0.11)/2); vg.rotateY(-Math.PI/2);
+  g.add(new THREE.Mesh(vg, ms({color:0x1f262d, roughness:0.15, metalness:0.3, polygonOffset:true, polygonOffsetFactor:-2})));
+  const pn = ms({color:0x161616, roughness:0.85}), ar = ms({color:0xb9bec4, roughness:0.3, metalness:0.7});
+  [[-0.82,1.35],[0.82,1.35],[-0.82,-1.38],[0.82,-1.38]].forEach(([a,b])=>{ const r = new THREE.Mesh(new THREE.CylinderGeometry(0.33,0.33,0.22,18), pn); r.rotation.z = Math.PI/2; r.position.set(a,0.33,b); g.add(r);
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.19,0.19,0.23,12), ar); c.rotation.z = Math.PI/2; c.position.set(a,0.33,b); g.add(c); });
+  [[-0.6,1],[0.6,1]].forEach(([a])=>{ const f = new THREE.Mesh(new THREE.BoxGeometry(0.34,0.1,0.04), ms({color:0xf4f1e6, emissive:0x555044})); f.position.set(a,0.74,L/2+0.04); g.add(f);
+    const t = new THREE.Mesh(new THREE.BoxGeometry(0.34,0.09,0.04), ms({color:0x9b1c1c, emissive:0x330808})); t.position.set(a,0.78,-L/2-0.04); g.add(t); });
+  g.traverse(o=>{ if(o.isMesh){ o.castShadow = true; o.receiveShadow = true; } }); return g; }
+const PAREDES_VIZ = [ms({color:0xf3f0e9, roughness:0.9}), ms({color:0xe8dfcf, roughness:0.9}), ms({color:0xdedbd4, roughness:0.9}), ms({color:0xefe6d6, roughness:0.9})];
+const vidroViz = ms({color:0x26313b, roughness:0.15, metalness:0.35}), portaViz = ms({color:0x8a5a33, roughness:0.6});
+let NVIZ = 0;
+const vizinha = (x0,z0,esp)=>{ const k = NVIZ++; const g = new THREE.Group(); g.position.set(x0,0,z0); if(esp) g.scale.z = -1; entorno.add(g);
+  const P = (a,b,c,d,y0,y1,m)=>B(a,b,c,d,y0,y1,m,g), par = PAREDES_VIZ[k % PAREDES_VIZ.length];
+  const yS = x=>3.48 + (x+0.05)*0.36 - 0.07, yW = x=>4.39 - 0.36*(x-4.75) - 0.07;
+  prisma([[0,0],[5,0],[5,yS(5)],[0,yS(0)]], 3.3, 12.0, par, g);                       // bloco social fechado até o telhado
+  prisma([[5.05,0],[8.5,0],[8.5,yW(8.5)],[5.05,yW(5.05)]], 2.4, 15.1, par, g);          // ala dos quartos fechada até o telhado
+  prisma([[4.95,yW(4.95)-0.05],[5.05,yW(5.05)-0.05],[5.05,yS(5.05)],[4.95,yS(4.95)]], 3.3, 12.0, vidroViz, g);   // faixa de vidro entre as águas
+  P(0,12,0.15,16.0,0,3.3,par); uvM(P(-0.04,15.05,0.16,16.05,0,2.72,M.pedraExt),1.1); uvM(P(5.05,15.09,8.5,15.11,0,2.9,M.tijoloFach),0.6);
+  P(0.4,11.97,3.8,12.03,0.05,2.6,vidroViz); [0.4,1.25,2.1,2.95,3.78].forEach(x=>P(x,11.95,x+0.04,12.05,0,2.6,M.preto)); P(3.95,11.97,4.85,12.03,0,2.2,portaViz);
+  [6.2,6.55,6.9,7.25].forEach(x=>P(x,15.1,x+0.18,15.14,1.55,2.05,vidroViz)); P(8.48,6,8.52,8,1.0,2.2,vidroViz); P(8.48,11,8.52,13,1.0,2.2,vidroViz);
+  P(5.05,15.09,10,20,0,0.03,M.grama); P(0,12,4.9,20,0,0.06,M.paver); P(9.85,0,10,15,0,2,M.muro); P(0,0,10,0.15,0,2,M.muro); P(0.15,0.15,9.85,3.3,0,0.03,M.grama); P(5.4,15.15,8.4,15.45,0,0.55,M.folha);
+  const ag = (xa,ya,xb,yb,z0,z1)=>{ const L = Math.hypot(xb-xa,yb-ya), o = new THREE.Mesh(new THREE.BoxGeometry(L,0.12,z1-z0), M.telha); o.position.set((xa+xb)/2,(ya+yb)/2,(z0+z1)/2); o.rotation.z = Math.atan2(yb-ya,xb-xa); o.castShadow = true; g.add(o);
+    const f = new THREE.Mesh(new THREE.BoxGeometry(L,0.3,0.06), M.preto); f.position.set((xa+xb)/2,(ya+yb)/2-0.08,z1+0.02); f.rotation.z = o.rotation.z; g.add(f); };
+  ag(-0.05,3.48,5.65,5.53,2.44,12.8); P(-0.05,12.0,4.95,16.75,2.73,2.95,M.metal); P(-0.05,16.7,4.95,16.78,2.3,2.85,M.preto); ag(4.75,4.39,9.35,2.73,1.38,15.89);
+  const c = carro(CORES_CARRO[k % CORES_CARRO.length]); c.position.set(2.35, 0.06, 14.4 + (k%3)*0.25); g.add(c);
   g.traverse(o=>{ if(o.isMesh){ o.castShadow = true; o.receiveShadow = true; } }); };
 vizinha(-10,0); vizinha(10,0); vizinha(-20,0); vizinha(20,0);
 vizinha(-10,52,true); vizinha(0,52,true); vizinha(10,52,true); vizinha(20,52,true);
@@ -2130,6 +5159,7 @@ FASE = 2; CATS = ['corredor'];
 CATS = [];
 FASE = 4; { const g = G(5.94,11.42,-Math.PI/2,'arandela'); B(-0.06,0,0.06,0.08,1.75,1.95,ms({color:0xe9e3d6, emissive:0xffe4b8, emissiveIntensity:0.6}),g); fim(g); }
 { const l = new THREE.PointLight(0xffe2bd, 0, 6.5, 2); l.position.set(5.5,2.5,11.0); l.userData.k = 0.45; casa.add(l); LUZES.push(l); }
+FASE = 0; B(0.15,0.15,4.9,3.74,0.035,0.085,M.deck);   // deck de madeira no lugar da piscina (Comfort)
 const IXC1 = casa.children.length;
 casa.children.slice(IXC0, IXC1).forEach(o=>{ o.userData.tipo = 'C'; o.visible = false; });
 
@@ -2143,6 +5173,7 @@ function recorta(o, bb, z0, z1){ salva(o); const a = bb.min.z, b = bb.max.z, na 
 const ehMuroComum = (o,bb)=> (o.material===M.cinza && bb.max.y < 0) || (o.material===M.muro && (bb.min.x > 9.2 || bb.max.z < 0.2 || (bb.max.x < 0.2 && bb.max.z <= 3.3)));
 function regraWing(o, bb, c){   // móveis e revestimentos do bloco dos quartos: da planta Premium para a Comfort
   if(c.z < 2.3) return;
+  if(c.x >= 6.05 && c.z > 4.85 && c.z < 6.7) return esconde(o);                             // closet inteiro (portas de vidro incluídas)
   if(c.z < 4.93){ move(o,0,0,3.51); return; }                                               // suíte (vai para os fundos da ala)
   if(c.x < 6.05 && c.z < 11.15) return esconde(o);                                           // corredor da Premium
   if(c.z < 6.6) return esconde(o);                                                           // closet (a Comfort não tem)
@@ -2788,6 +5819,170 @@ addEventListener('keydown', e=>{ if(e.key==='Escape' && KX.on) kxFecha(); });
 addEventListener('message', e=>{ const m = e.data || {}; if(m.evt) return; if(m.cmd==='kitAcao') m.on===false ? kxFecha() : kxAbre(m.cap||0); });
 window.CASA = Object.assign(window.CASA || {}, {kxAbre, kxFecha, KITNUM});
 
+// ===================== VISUAL: Normal · Maquete branca · Ilustrado =====================
+const EST = {nome:'atual', comp:null, orig:new Map(), sky:null, envRT:null};
+const _render = renderer.render.bind(renderer); let _dentro = false;
+const NMAT = new THREE.ShaderMaterial({side:THREE.DoubleSide, vertexShader:`varying vec3 vN; varying float vZ;
+  void main(){
+  #include <beginnormal_vertex>
+  #include <defaultnormal_vertex>
+  #include <begin_vertex>
+  #include <project_vertex>
+  vN = normalize(transformedNormal); vZ = -mvPosition.z; }`, fragmentShader:`varying vec3 vN; varying float vZ; void main(){ vec3 n = normalize(gl_FrontFacing ? vN : -vN); gl_FragColor = vec4(n*0.5+0.5, vZ/100.); }`});
+const _cc = new THREE.Color();
+function passeNormais(){ if(!EST.nrt) return; const ov = scene.overrideMaterial, bg = scene.background, fg = scene.fog, au = renderer.shadowMap.autoUpdate, ca = renderer.getClearAlpha(); renderer.getClearColor(_cc);
+  const ocultos = []; scene.traverse(o=>{ if((o.isPoints || o.isSprite || o.isLine || o.userData.semContorno) && o.visible){ o.visible = false; ocultos.push(o); } });
+  scene.overrideMaterial = NMAT; scene.background = null; scene.fog = null; renderer.shadowMap.autoUpdate = false; renderer.setRenderTarget(EST.nrt); renderer.setClearColor(0x8080ff, 1); renderer.clear(); _render(scene, cam);
+  renderer.setRenderTarget(null); renderer.setClearColor(_cc, ca); scene.overrideMaterial = ov; scene.background = bg; scene.fog = fg; renderer.shadowMap.autoUpdate = au; ocultos.forEach(o=>o.visible = true); }
+renderer.render = function(s, c){ if(EST.comp && s===scene && !_dentro){ _dentro = true; try{ passeNormais(); EST.comp.render(); } finally { _dentro = false; } } else _render(s, c); };
+const pmrem = new THREE.PMREMGenerator(renderer);
+const L0 = {sun:sun.intensity, sc:sun.color.clone(), hemi:hemi.intensity, bg:scene.background.clone(), ex:renderer.toneMappingExposure};
+function restauraMats(){ EST.orig.forEach((m,o)=>o.material = m); EST.orig.clear(); }
+function cadaMalha(f){ scene.traverse(o=>{ if(o.isMesh && o.material && !o.userData.semEstilo) f(o); }); }
+function composer(passes){ const W = view.clientWidth, H = view.clientHeight, pr = renderer.getPixelRatio();
+  const rt = new THREE.WebGLRenderTarget(W*pr, H*pr, {type:THREE.HalfFloatType, minFilter:THREE.LinearFilter, magFilter:THREE.LinearFilter, format:THREE.RGBAFormat});
+  const c = new THREE.EffectComposer(renderer, rt); c.setPixelRatio(pr); c.setSize(W, H); passes(c, W*pr, H*pr); return c; }
+const GRADE = (sat, con, vin)=>({ uniforms:{tDiffuse:{value:null}}, vertexShader:'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+  fragmentShader:`uniform sampler2D tDiffuse; varying vec2 vUv; vec3 srgb(vec3 c){ return mix(c*12.92, 1.055*pow(c, vec3(1./2.4)) - 0.055, step(0.0031308, c)); }
+  void main(){ vec3 c = srgb(max(texture2D(tDiffuse, vUv).rgb, 0.)); float l = dot(c, vec3(.299,.587,.114)); c = mix(vec3(l), c, ${sat.toFixed(2)}); c = (c - 0.5)*${con.toFixed(2)} + 0.5;
+    float v = smoothstep(0.95, 0.35, length(vUv - 0.5)); c *= mix(1., v, ${vin.toFixed(2)}); gl_FragColor = vec4(clamp(c,0.,1.), 1.); }` });
+
+const KVIS = 'villaAnna.casaModelo.visual';
+// materiais da maquete (compartilhados)
+const MQ = { branco:new THREE.MeshStandardMaterial({color:0xf3f1ec, roughness:0.92, envMapIntensity:0.55}), vidro:new THREE.MeshStandardMaterial({color:0xcfdde3, roughness:0.05, metalness:0.2, transparent:true, opacity:0.35, envMapIntensity:1, depthWrite:false}),
+  verde:new THREE.MeshStandardMaterial({color:0xd9e2d0, roughness:0.95, envMapIntensity:0.5}), madeira:new THREE.MeshStandardMaterial({color:0xd8c3a3, roughness:0.8, envMapIntensity:0.5}), agua:new THREE.MeshStandardMaterial({color:0xc9dde3, roughness:0.1, transparent:true, opacity:0.75, envMapIntensity:1}), escuro:new THREE.MeshStandardMaterial({color:0x9aa0a6, roughness:0.85, envMapIntensity:0.5}) };
+const MQSET = new Set(Object.values(MQ));
+function trocaMaquete(){ const VERDES = [M.folha, M.folha2, M.grama], MAD = [M.madeira, M.nogueira, M.deck, M.madEsc].filter(Boolean);
+  cadaMalha(o=>{ const m = o.material; if(Array.isArray(m) || !m || MQSET.has(m)) return; if(!(m.isMeshStandardMaterial || (m.isMeshBasicMaterial && !m.map && m.toneMapped!==false))) return; EST.orig.set(o, m);
+    o.material = m===M.vidro || m===M.fume || (m.transparent && m.opacity < 0.7 && m!==M.agua) ? MQ.vidro : m===M.agua ? MQ.agua : VERDES.includes(m) ? MQ.verde : MAD.includes(m) ? MQ.madeira : (m===M.preto || m===M.tv) ? MQ.escuro : MQ.branco; }); }
+let envSala = null;
+function estilo(n){ if(!['atual','maquete','aquarela'].includes(n)) n = 'atual'; EST.nome = n; if(EST.nrt){ EST.nrt.dispose(); EST.nrt = null; } sun.castShadow = true; fogo.userData.semEstilo = cascata.userData.semEstilo = true; restauraMats(); EST.comp = null; scene.environment = null; scene.fog = null;
+  sun.intensity = L0.sun; sun.color.copy(L0.sc); hemi.intensity = L0.hemi; scene.background = L0.bg.clone(); renderer.toneMappingExposure = L0.ex;
+  cadaMalha(o=>{ const m = o.material; if(m.isMeshStandardMaterial && m.envMapIntensity !== 1 && !MQSET.has(m)){ m.envMapIntensity = 1; m.needsUpdate = true; } });
+  if(n !== 'atual' && !envSala) envSala = pmrem.fromScene(new THREE.RoomEnvironment(), 0.04);
+  if(n === 'maquete'){
+    scene.environment = envSala.texture; scene.background = new THREE.Color(0xe9ecef);
+    trocaMaquete();
+    sun.intensity = 1.6; sun.color.setHex(0xffffff); hemi.intensity = 0.25; renderer.toneMappingExposure = 0.9;
+    EST.comp = composer((c,W,H)=>{ const ao = new THREE.SSAOPass(scene, cam, W, H); ao.kernelRadius = 0.6; ao.minDistance = 0.00001; ao.maxDistance = 0.0025; c.addPass(ao);
+      const fx = new THREE.ShaderPass(THREE.FXAAShader); fx.uniforms.resolution.value.set(1/W, 1/H); c.addPass(fx); c.addPass(new THREE.ShaderPass(GRADE(1.0, 1.06, 0.25))); });
+  }
+  if(n === 'aquarela'){
+    scene.environment = envSala.texture; scene.background = new THREE.Color(0xf6f1e6);
+    cadaMalha(o=>{ const m = o.material; if(m.isMeshStandardMaterial){ m.envMapIntensity = 0.25; m.needsUpdate = true; } });
+    sun.intensity = 1.2; hemi.intensity = 0.42; renderer.toneMappingExposure = 0.88; sun.castShadow = false;
+    const AQ = { uniforms:{tDiffuse:{value:null}, tNorm:{value:null}, res:{value:new THREE.Vector2()}, t:{value:0}, prog:{value:1}},
+      vertexShader:'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+      fragmentShader:`uniform sampler2D tDiffuse; uniform sampler2D tNorm; uniform vec2 res; uniform float prog; varying vec2 vUv;
+        float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+        float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.-2.*f); return mix(mix(h(i),h(i+vec2(1,0)),f.x), mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x), f.y); }
+        float fbm(vec2 p){ float v = 0., a = .5; for(int i=0;i<5;i++){ v += a*n(p); p *= 2.03; a *= .5; } return v; }
+        float lum(vec3 c){ return dot(c, vec3(.299,.587,.114)); }
+        void main(){ vec2 px = 1./res; vec2 w = vec2(fbm(vUv*7.)-.5, fbm(vUv*7.+5.)-.5)*0.006; vec2 uv = vUv + w;
+          vec3 c = vec3(0.); float tot = 0.; for(int i=-1;i<=1;i++) for(int j=-1;j<=1;j++){ float k = 1./(1.+float(i*i+j*j)); c += texture2D(tDiffuse, uv + vec2(i,j)*px*0.8).rgb*k; tot += k; } c /= tot;
+          float gx = 0., gy = 0.; for(int i=-1;i<=1;i++) for(int j=-1;j<=1;j++){ float l = lum(texture2D(tDiffuse, vUv + vec2(i,j)*px*1.2).rgb); gx += l*float(i)*(j==0?2.:1.); gy += l*float(j)*(i==0?2.:1.); }
+          float ed = smoothstep(0.08, 0.35, length(vec2(gx,gy)));
+          vec4 n0 = texture2D(tNorm, vUv); float eg = 0.;
+          for(int k=0;k<4;k++){ vec2 o = (k==0 ? vec2(1,0) : k==1 ? vec2(-1,0) : k==2 ? vec2(0,1) : vec2(0,-1))*px*1.1; vec4 nk = texture2D(tNorm, vUv + o);
+            float dn = 1. - dot(n0.xyz*2.-1., nk.xyz*2.-1.); float dz = abs(n0.w - nk.w)/max(min(n0.w, nk.w), 0.002);
+            eg = max(eg, max(smoothstep(0.12, 0.45, dn), smoothstep(0.035, 0.09, dz))); }
+          ed = max(ed, eg*0.95);
+          c = pow(c, vec3(1./2.2));
+          float l = lum(c); c = mix(vec3(l), c, 1.45); c = clamp(c, 0., 1.); 
+          float paper = fbm(vUv*vec2(res.x/res.y,1.)*180.)*0.5 + fbm(vUv*25.)*0.5;
+          c = mix(c, vec3(0.97,0.95,0.9), 0.03);
+          c *= 0.94 + 0.08*paper; c = (c - 0.5)*1.12 + 0.5; c = mix(c, vec3(0.22,0.19,0.17), ed*0.8);
+          vec3 pap = vec3(0.97,0.95,0.9)*(0.95 + 0.06*paper);
+          float nz = fbm(vUv*3.)*0.55 + vUv.x*0.25 + (1.-vUv.y)*0.2; float P = prog*2.0;
+          float traco = smoothstep(nz, nz+0.06, P), aguada = smoothstep(nz+0.55, nz+0.95, P);
+          float lapis = max(smoothstep(0.03, 0.2, length(vec2(gx,gy))), eg);
+          vec3 esboco = mix(pap, vec3(0.32,0.29,0.26), lapis*0.65*traco);
+          c = mix(esboco, c, aguada);
+          float v = smoothstep(0.75, 0.3, length(vUv-.5)*1.25 + (fbm(vUv*5.)-.5)*0.25); c = mix(pap, c, v);
+          gl_FragColor = vec4(c,1.); }` };
+    EST.comp = composer((c,W,H)=>{ c.addPass(new THREE.RenderPass(scene, cam)); EST.nrt && EST.nrt.dispose(); EST.nrt = new THREE.WebGLRenderTarget(W, H, {type:THREE.HalfFloatType, minFilter:THREE.NearestFilter, magFilter:THREE.NearestFilter, format:THREE.RGBAFormat}); const p = new THREE.ShaderPass(AQ); p.uniforms.res.value.set(W,H); p.uniforms.tNorm.value = EST.nrt.texture; EST.aq = p.uniforms; c.addPass(p); });
+  }
+  try{ localStorage.setItem(KVIS, n); }catch(e){}
+  const sv = document.getElementById('selVis'); if(sv) sv.value = n; }
+// objetos criados ou trocados depois (reforma, perfil, Kit Plus, Comfort) também ficam brancos na maquete
+setInterval(()=>{ if(EST.nome==='maquete') trocaMaquete(); }, 600);
+// tamanho da tela mudou: refaz o pós-processamento
+{ let tm = null; new ResizeObserver(()=>{ if(!EST.comp) return; clearTimeout(tm); tm = setTimeout(()=>{ const n = EST.nome; estilo(n); }, 250); }).observe(view); }
+// seletor no cabeçalho
+{ const sel = document.createElement('select'); sel.id = 'selVis'; sel.title = 'Estilo de visual da casa';
+  sel.innerHTML = '<option value="atual">Visual normal</option><option value="maquete">Maquete branca</option><option value="aquarela">Ilustrado</option>';
+  sel.style.cssText = 'border:0;border-radius:7px;background:#2b3038;color:#e8ebef;padding:6px 8px;font:600 13px inherit;cursor:pointer';
+  sel.onchange = ()=>estilo(sel.value); const f = document.getElementById('selFach'); (f || document.getElementById('bWalk')).after(sel); }
+addEventListener('message', e=>{ const m = e.data || {}; if(m.evt) return; if(m.cmd==='visual') estilo(m.v); });
+try{ const v = localStorage.getItem(KVIS); if(v && v!=='atual') estilo(v); }catch(e){}
+window.CASA = Object.assign(window.CASA || {}, {estilo});
+
+// ===================== VISUAL ILUSTRADO: a casa desenhada em traço e aquarela =====================
+// visual único: ilustrado (traço + aquarela). O seletor de estilo sai.
+{ const sv = document.getElementById('selVis'); if(sv) sv.remove(); }
+const _est = estilo; estilo = function(){ return _est('aquarela'); };
+estilo('aquarela');
+// ---------- "desenhar" a vista: primeiro o traço a lápis, depois a aguada de cor ----------
+const DES = {t0:0, dur:3.2, on:false};
+function desenha(dur=3.2){ if(reduce){ if(EST.aq) EST.aq.prog.value = 1; return; } DES.t0 = performance.now(); DES.dur = dur; DES.on = true; if(EST.aq) EST.aq.prog.value = 0; }
+(function desLaco(){ requestAnimationFrame(desLaco); if(!DES.on || !EST.aq) return; const k = Math.min(1, (performance.now() - DES.t0)/1000/DES.dur); EST.aq.prog.value = 1 - Math.pow(1-k, 1.6); if(k >= 1) DES.on = false; })();
+// redesenha quando a vista muda (Maquete/Fachada/Caminhar e os atalhos de cômodo)
+{ const _sm = setModo; setModo = function(m, semCam){ const mud = m !== modo; const r = _sm.apply(this, arguments); if(mud) desenha(2.6); return r; }; }
+{ const _ip = irPara; irPara = function(){ const r = _ip.apply(this, arguments); desenha(2.2); return r; }; }
+
+setTimeout(()=>desenha(3.6), 500);
+
+
+// ===================== AJUSTES: sem "Um dia na casa"; "Cômodos" no lugar de "Caminhar" =====================
+{ const b = document.getElementById('bDia'); if(b) b.style.display = 'none'; const d = document.getElementById('dia'); if(d) d.style.display = 'none'; }
+// ---- modo Cômodos: a câmera fica parada em cada ambiente; arrastar só olha em volta ----
+{ const bw = document.getElementById('bWalk'); bw.textContent = 'Cômodos'; bw.title = 'Ver a casa cômodo a cômodo (e as mudanças da reforma em cada um)'; }
+HINTS.walk = 'Arraste para olhar em volta · ◀ ▶ ou os botões trocam de cômodo';
+const stCm = document.createElement('style'); stCm.textContent = `
+body.walk .pad{display:none !important}
+#cmNav{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:none;align-items:center;gap:10px;background:rgba(29,33,39,.86);color:#fff;border-radius:22px;padding:5px 6px;z-index:5;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+body.walk #cmNav{display:flex}
+#cmNav button{border:0;background:rgba(255,255,255,.12);color:#fff;width:34px;height:34px;border-radius:50%;font:700 16px "Segoe UI";cursor:pointer} #cmNav button:hover{background:rgba(255,255,255,.25)}
+#cmNav b{font:600 15px "Segoe UI",Arial;min-width:170px;text-align:center} #cmNav small{display:block;font:400 11px "Segoe UI";color:#aab3bf;text-align:center}
+.ir button.on{background:#fff !important;color:#1d2127 !important}`;
+document.head.appendChild(stCm);
+const cmNav = document.createElement('div'); cmNav.id = 'cmNav'; cmNav.innerHTML = '<button data-d="-1" title="Cômodo anterior">◀</button><div><b></b><small></small></div><button data-d="1" title="Próximo cômodo">▶</button>'; view.appendChild(cmNav);
+let CMK = 'sala';
+const cmLista = ()=>[...document.querySelectorAll('#ir [data-ir]')].filter(b=>b.style.display!=='none').map(b=>({k:b.dataset.ir, n:b.textContent.trim()}));
+function cmMarca(){ const L = cmLista(), i = Math.max(0, L.findIndex(q=>q.k===CMK)); cmNav.querySelector('b').textContent = L[i] ? (L[i].k==='rua' ? 'Fachada (da rua)' : L[i].n) : '';
+  cmNav.querySelector('small').textContent = (i+1) + ' de ' + L.length; document.querySelectorAll('#ir [data-ir]').forEach(b=>b.classList.toggle('on', modo==='walk' && b.dataset.ir===CMK)); }
+// enquadramento de "foto" de cada cômodo: [x, z, olha x, olha y, olha z]
+const FOTOS = { P:{ sala:[4.4,11.5,0.8,1.0,9.3], cozinha:[4.3,8.9,1.4,0.9,6.3], gourmet:[4.1,5.25,0.6,0.9,3.7], piscina:[3.95,0.55,1.0,0.6,3.6], suite:[5.4,2.75,8.2,0.8,4.6],
+    banho:[8.25,8.25,6.3,1.0,9.35], adolescente:[5.5,12.6,8.2,0.8,14.3], infantil:[8.15,10.4,6.4,0.6,11.4,2.0] },
+  C:{ cozinha:[4.3,9.4,1.4,0.9,6.6], gourmet:[3.9,5.6,0.6,0.9,4.1], suite:[5.4,6.3,8.2,0.8,8.1], adolescente:[5.45,12.3,8.1,0.8,14.6], banho:[6.3,11.75,8.2,1.0,10.9] } };
+{ const _ip = irPara; irPara = function(k){ CMK = k; const r = _ip.apply(this, arguments);
+    const f = TIPO==='comfort' ? (FOTOS.C[k] || (k==='sala' ? FOTOS.P.sala : null)) : FOTOS.P[k];
+    W.y = OLHO; if(f){ W.x = f[0]; W.z = f[1]; W.y = f[5] || OLHO; W.yaw = Math.atan2(-(f[2]-f[0]), -(f[4]-f[1])); W.pitch = Math.atan2(f[3]-W.y, Math.hypot(f[2]-f[0], f[4]-f[1])); aplicaCam(); atualizaLoc(); }
+    cmMarca(); return r; }; }
+cmNav.addEventListener('click', e=>{ const b = e.target.closest('[data-d]'); if(!b) return; const L = cmLista(); let i = L.findIndex(q=>q.k===CMK); i = (i + (+b.dataset.d) + L.length) % L.length; irPara(L[i].k); });
+// sem andar: as teclas de movimento não fazem nada; setas laterais trocam de cômodo
+addEventListener('keydown', e=>{ if(modo!=='walk' || e.target.tagName==='INPUT') return;
+  if(['KeyW','KeyS','KeyA','KeyD','ArrowUp','ArrowDown','ShiftLeft','ShiftRight'].includes(e.code)){ e.stopImmediatePropagation(); e.preventDefault(); }
+  if(e.code==='ArrowLeft' || e.code==='ArrowRight'){ e.stopImmediatePropagation(); e.preventDefault(); if(!e.repeat) cmNav.querySelector(`[data-d="${e.code==='ArrowLeft' ? -1 : 1}"]`).click(); } }, true);
+// lente mais aberta dentro dos cômodos
+{ const _sm2 = setModo; setModo = function(m){ const r = _sm2.apply(this, arguments); cam.fov = m==='walk' ? 64 : 50; cam.updateProjectionMatrix(); cmMarca(); return r; }; }
+document.getElementById('bWalk').onclick = ()=>{ if(modo!=='walk') irPara(CMK==='rua' ? 'sala' : CMK); };
+// ao trocar Premium/Comfort dentro dos cômodos, volta para a sala se o cômodo não existir
+{ const _st2 = setTipo; setTipo = function(){ const r = _st2.apply(this, arguments); if(modo==='walk'){ if(!cmLista().find(q=>q.k===CMK)) irPara('sala'); else irPara(CMK); } cmMarca(); return r; }; }
+
+// nos cômodos as portas ficam fechadas (não abrem na frente da câmera)
+{ const _pw = passoWalk; passoWalk = function(dt){ _pw(dt); DOORS.forEach(d=>{ d.k = 0; d.leaf.rotation.y = 0; }); SLIDES.forEach(q=>{ q.k = 0; q.g.position.x = q.x; }); }; }
+
+aplicaCam = function(){ cam.position.set(W.x, W.y || OLHO, W.z); cam.rotation.set(W.pitch, W.yaw, 0); };
+
+// ===================== SOL DA TARDE (fim do dia) =====================
+function solTarde(){ const d = new THREE.Vector3(-0.72, 0.3, 0.62).normalize(); sun.position.copy(sun.target.position).addScaledVector(d, 40);
+  sun.color.setHex(0xff9c4c); sun.intensity = 2.0; sun.castShadow = true; hemi.color.setHex(0xd9b8c4); hemi.groundColor.setHex(0x6a5040); hemi.intensity = 0.34;
+  scene.background = new THREE.Color(0xf2bf92); renderer.toneMappingExposure = 0.92;
+  if(typeof DIA !== 'undefined') DIA.ext.forEach(l=>l.intensity = 0.55); }
+{ const _estT = estilo; estilo = function(){ const r = _estT.apply(this, arguments); solTarde(); return r; }; }
+{ const _li = luzesInt; window.__luzesInt = _li; }
+solTarde();
 </script>
 <script>/* ===== Mingardi · Leads + Modo Plantão ===== */
 (()=>{
