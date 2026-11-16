@@ -1,0 +1,16 @@
+{
+  "name": "Villa Anna · Casa Modelo",
+  "short_name": "Villa Anna",
+  "description": "Casa modelo 3D da Villa Anna — Mingardi & Elias",
+  "lang": "pt-BR",
+  "start_url": "./?plantao",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#1d2127",
+  "theme_color": "#1d2127",
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

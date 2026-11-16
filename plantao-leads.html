@@ -1,0 +1,141 @@
+<script>/* ===== Mingardi · Leads + Modo Plantão ===== */
+(()=>{
+const KLEADS='villaAnna.leads.v1', KWA='villaAnna.comercial.wa';
+const qs=new URLSearchParams(location.search);
+const PLANTAO=qs.has('plantao');
+const soDig=s=>(s||'').replace(/\D/g,'');
+let WA=soDig(qs.get('wa'))||soDig(lerJ(KWA,''));
+if(qs.get('wa')) gravarJ(KWA,WA);
+const escH=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const css=document.createElement('style');css.textContent=`
+.ld-bg{position:fixed;inset:0;background:rgba(15,18,22,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.ld-bg.on{display:flex}
+.ld{background:#fff;border-radius:16px;width:min(440px,100%);max-height:100%;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.35);font:14px "Segoe UI",Arial,sans-serif;color:#1d2127}
+.ld-h{background:#1d2127;color:#fff;padding:14px 16px;display:flex;align-items:center}
+.ld-h span{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#E30613;font-weight:700}
+.ld-h b{font-size:16px}.ld-h .x{margin-left:auto;border:0;background:none;color:#fff;font-size:24px;cursor:pointer}
+.ld-b{padding:14px 16px}
+.ld label{display:block;font-weight:600;font-size:13px;margin:10px 0 4px}
+.ld input[type=text],.ld input[type=tel],.ld input[type=email]{width:100%;border:1px solid #d6d3cc;border-radius:9px;padding:10px;font:15px inherit}
+.ld .res{background:#f6f4f0;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.45;margin-top:12px;max-height:150px;overflow:auto}
+.ld .ok{display:flex;gap:8px;align-items:flex-start;font-weight:400;font-size:12px;color:#5b6370}
+.ld .err{color:#c00;font-size:12px;min-height:16px;margin-top:6px}
+.ld .acts{display:flex;gap:8px;margin-top:10px}
+.ld .acts button{flex:1;border:0;border-radius:10px;padding:12px;font:700 14px inherit;cursor:pointer;background:#eceae5;color:#1d2127}
+.ld .acts .pri{background:#E30613;color:#fff}
+.ld table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.ld td,.ld th{border-bottom:1px solid #eee;padding:5px 4px;text-align:left;vertical-align:top}
+.ld-fim{text-align:center;padding:24px 16px}.ld-fim b{font-size:20px;display:block;margin-bottom:6px}
+#bLead{background:#E30613;color:#fff}
+.attract{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:12vh;background:linear-gradient(transparent 40%,rgba(15,18,22,.7));color:#fff;cursor:pointer;text-align:center;font-family:"Segoe UI",Arial,sans-serif}
+.attract.on{display:flex}.attract b{font-size:clamp(26px,5vw,44px)}.attract span{font-size:clamp(14px,2.2vw,20px);margin-top:8px;opacity:.9}
+.attract i{margin-top:18px;font-style:normal;background:#E30613;border-radius:30px;padding:12px 26px;font-weight:700;animation:kxPulse 2s infinite}
+body.plantao #bVolta{display:none}`;
+document.head.appendChild(css);
+if(PLANTAO) document.body.classList.add('plantao');
+
+const sp=document.querySelector('header .sp');
+const bL=document.createElement('button');bL.className='hbtn';bL.id='bLead';bL.textContent='Quero esta casa';bL.title='Salvar a casa que você montou e falar com um corretor';
+sp.after(bL);
+if(PLANTAO){const bF=document.createElement('button');bF.className='hbtn';bF.textContent='⛶';bF.title='Tela cheia';bF.onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.().catch(()=>{});bL.after(bF);}
+
+const bg=document.createElement('div');bg.className='ld-bg';document.body.appendChild(bg);
+bg.addEventListener('click',e=>{if(e.target===bg)fecha();});
+function fecha(){bg.classList.remove('on');}
+
+function escolhas(){
+  return Object.keys(OPC).map(k=>{const o=OPC[k],op=o.ops.find(x=>x[0]===SEL[k]);return op?{cat:o.nome,v:op[1],mudou:SEL[k]!==PADRAO[k]}:null;}).filter(Boolean);
+}
+function resumo(){
+  const t=TIPO==='comfort'?'Comfort':'Premium';
+  return {tipo:t,kit:KITON?'Com Kit Plus':'Sem Kit Plus',itens:escolhas()};
+}
+function textoWA(l){
+  const ln=['*Villa Anna · Casa Modelo* (lead do app)','',`Nome: ${l.nome}`,`WhatsApp: ${l.fone}`];
+  if(l.email) ln.push(`E-mail: ${l.email}`);
+  ln.push('',`Tipologia: ${l.tipo}`,`Kit: ${l.kit}`,'','*Acabamentos escolhidos:*');
+  l.itens.forEach(i=>ln.push(`• ${i.cat}: ${i.v}${i.mudou?' ★':''}`));
+  ln.push('','★ = alterado em relação ao decorado');
+  return ln.join('\n');
+}
+
+function abreForm(){
+  const r=resumo();
+  const muda=r.itens.filter(i=>i.mudou);
+  bg.innerHTML=`<div class="ld" role="dialog" aria-label="Quero esta casa">
+  <div class="ld-h"><div><span>Villa Anna</span><b>Quero esta casa</b></div><button class="x" aria-label="Fechar">×</button></div>
+  <div class="ld-b">
+    <div style="color:#5b6370;font-size:13px">Deixe seu contato e um corretor da Mingardi fala com você sobre a casa que você montou.</div>
+    <label for="ldN">Nome</label><input id="ldN" type="text" autocomplete="name">
+    <label for="ldF">WhatsApp (com DDD)</label><input id="ldF" type="tel" inputmode="tel" placeholder="(16) 99999-9999" autocomplete="tel">
+    <label for="ldE">E-mail (opcional)</label><input id="ldE" type="email" autocomplete="email">
+    <div class="res"><b>${r.tipo} · ${r.kit}</b><br>${muda.length?muda.map(i=>escH(i.cat)+': '+escH(i.v)).join('<br>'):'Acabamentos do decorado original'}</div>
+    <label class="ok"><input type="checkbox" id="ldOk"> Autorizo a Mingardi & Elias a entrar em contato comigo sobre este empreendimento.</label>
+    <div class="err" id="ldErr"></div>
+    <div class="acts"><button class="pri" id="ldGo">${WA?'Enviar pelo WhatsApp':'Salvar meu contato'}</button></div>
+  </div></div>`;
+  bg.classList.add('on');
+  bg.querySelector('.x').onclick=fecha;
+  setTimeout(()=>bg.querySelector('#ldN')?.focus(),50);
+  bg.querySelector('#ldGo').onclick=()=>{
+    const nome=bg.querySelector('#ldN').value.trim(),fone=bg.querySelector('#ldF').value.trim(),email=bg.querySelector('#ldE').value.trim();
+    const err=bg.querySelector('#ldErr');
+    if(nome.length<2) return err.textContent='Informe seu nome.';
+    if(soDig(fone).length<10) return err.textContent='Informe o WhatsApp com DDD.';
+    if(!bg.querySelector('#ldOk').checked) return err.textContent='Marque a autorização de contato.';
+    const l=Object.assign({quando:new Date().toISOString(),nome,fone,email,origem:PLANTAO?'plantão':'link'},r);
+    const L=lerJ(KLEADS,[]);L.push(l);gravarJ(KLEADS,L);
+    if(WA){const u='https://wa.me/'+WA+'?text='+encodeURIComponent(textoWA(l));window.open(u,'_blank')||(location.href=u);}
+    bg.querySelector('.ld').innerHTML=`<div class="ld-fim"><b>Obrigado, ${escH(nome.split(' ')[0])}!</b>Um corretor vai falar com você em breve.<div class="acts"><button class="pri" id="ldX">Continuar explorando</button></div></div>`;
+    bg.querySelector('#ldX').onclick=()=>{fecha();if(PLANTAO)reiniciar();};
+  };
+}
+bL.onclick=abreForm;
+
+/* ---- painel do corretor: 5 toques no título ou ?corretor ---- */
+function csv(L){
+  const cats=Object.keys(OPC).map(k=>OPC[k].nome);
+  const cab=['Data','Nome','WhatsApp','E-mail','Origem','Tipologia','Kit',...cats];
+  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const lin=L.map(l=>{const m={};(l.itens||[]).forEach(i=>m[i.cat]=i.v);return[new Date(l.quando).toLocaleString('pt-BR'),l.nome,l.fone,l.email,l.origem,l.tipo,l.kit,...cats.map(c=>m[c])].map(q).join(';');});
+  return '﻿'+[cab.map(q).join(';'),...lin].join('\r\n');
+}
+function abreCorretor(){
+  const L=lerJ(KLEADS,[]);
+  bg.innerHTML=`<div class="ld"><div class="ld-h"><div><span>Uso interno</span><b>Painel do corretor</b></div><button class="x" aria-label="Fechar">×</button></div>
+  <div class="ld-b">
+    <label for="ldW">WhatsApp do comercial que recebe os leads</label>
+    <input id="ldW" type="tel" placeholder="55 16 99999-9999" value="${escH(WA)}">
+    <div style="font-size:11.5px;color:#5b6370;margin-top:4px">Com código do país (55) e DDD. Deixe vazio para só guardar no aparelho.</div>
+    <div class="acts"><button id="ldSalva">Salvar número</button></div>
+    <label>Leads guardados neste aparelho (${L.length})</label>
+    <table><tr><th>Data</th><th>Nome</th><th>WhatsApp</th><th>Casa</th></tr>
+    ${L.slice().reverse().map(l=>`<tr><td>${new Date(l.quando).toLocaleDateString('pt-BR')}</td><td>${escH(l.nome)}</td><td>${escH(l.fone)}</td><td>${escH(l.tipo)}${l.kit==='Com Kit Plus'?' + Kit':''}</td></tr>`).join('')||'<tr><td colspan=4>Nenhum lead ainda.</td></tr>'}</table>
+    <div class="acts"><button class="pri" id="ldCsv" ${L.length?'':'disabled'}>Exportar planilha (.csv)</button><button id="ldLimpa" ${L.length?'':'disabled'}>Apagar leads</button></div>
+  </div></div>`;
+  bg.classList.add('on');
+  bg.querySelector('.x').onclick=fecha;
+  bg.querySelector('#ldSalva').onclick=()=>{WA=soDig(bg.querySelector('#ldW').value);gravarJ(KWA,WA);abreCorretor();};
+  bg.querySelector('#ldCsv').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv(L)],{type:'text/csv;charset=utf-8'}));a.download='leads-villa-anna-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();a.remove();};
+  bg.querySelector('#ldLimpa').onclick=()=>{if(confirm('Apagar os '+L.length+' leads deste aparelho? Exporte a planilha antes. Não dá para desfazer.')){gravarJ(KLEADS,[]);abreCorretor();}};
+}
+let toques=0,tt;document.querySelector('header h1').addEventListener('click',()=>{toques++;clearTimeout(tt);tt=setTimeout(()=>toques=0,1500);if(toques>=5){toques=0;abreCorretor();}});
+if(qs.has('corretor')) setTimeout(abreCorretor,300);
+
+/* ---- modo plantão: volta ao decorado após inatividade ---- */
+const at=document.createElement('div');at.className='attract';
+at.innerHTML='<b>Villa Anna · Casa Modelo</b><span>Caminhe pela casa e escolha os acabamentos do seu jeito</span><i>Toque para começar</i>';
+document.body.appendChild(at);
+at.onclick=()=>{at.classList.remove('on');pinga();};
+function reiniciar(){
+  try{fecha();document.getElementById('ref').hidden=true;moverLiga(false);if(typeof diaLiga==='function'&&DIA&&DIA.on)diaLiga(false);
+    if(typeof kxFecha==='function'&&KX&&KX.on)kxFecha();aplicarTudo(PADRAO,false);if(KITON)kitLiga(false,false);setModo('maq');}catch(e){console.warn(e);}
+  at.classList.add('on');
+}
+let ocioso;const IDLE=(+qs.get('ocioso')||180)*1000;
+function pinga(){clearTimeout(ocioso);if(PLANTAO)ocioso=setTimeout(reiniciar,IDLE);}
+if(PLANTAO){['pointerdown','keydown','wheel','touchstart'].forEach(e=>addEventListener(e,pinga,{passive:true}));at.classList.add('on');pinga();}
+window.CASA=Object.assign(window.CASA||{},{abreLead:abreForm,abreCorretor,reiniciarPlantao:reiniciar});
+})();
+</script>

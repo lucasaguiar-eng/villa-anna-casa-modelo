@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Placa do stand · Villa Anna</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{--ink:#1d2127;--red:#E30613;--paper:#f6f4f0}
+  *{box-sizing:border-box}
+  body{margin:0;background:#d9dee3;font-family:"Segoe UI",Arial,sans-serif;color:var(--ink)}
+  .ctl{max-width:720px;margin:16px auto;padding:12px 16px;background:#fff;border-radius:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .ctl label{font-weight:600;font-size:13px}
+  .ctl input{flex:1;min-width:220px;border:1px solid #ccc;border-radius:8px;padding:8px;font:14px inherit}
+  .ctl button{border:0;border-radius:8px;padding:9px 14px;font:700 14px inherit;background:var(--red);color:#fff;cursor:pointer}
+  .ctl small{width:100%;color:#5b6370}
+  /* A5 retrato: 148 x 210 mm */
+  .placa{width:148mm;height:210mm;margin:0 auto 24px;background:var(--ink);color:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;padding:14mm 12mm 10mm;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+  .placa .faixa{position:absolute;left:0;right:0;top:0;height:5mm;background:var(--red)}
+  .placa .sub{font-size:9pt;letter-spacing:.18em;text-transform:uppercase;color:var(--red);font-weight:700}
+  .placa h1{font-size:30pt;margin:2mm 0 0;font-weight:800;letter-spacing:.02em}
+  .placa h2{font-size:15pt;margin:1mm 0 8mm;font-weight:400;color:#cfd5dc}
+  .qr{background:#fff;padding:5mm;border-radius:4mm}
+  .qr img,.qr canvas{display:block;width:62mm!important;height:62mm!important}
+  .placa .cta{margin-top:7mm;font-size:16pt;font-weight:700;text-align:center;line-height:1.25}
+  .placa .passos{margin-top:5mm;font-size:10.5pt;color:#cfd5dc;text-align:center;line-height:1.5}
+  .placa .nfc{margin-top:4mm;display:flex;align-items:center;gap:3mm;font-size:10pt;color:#fff;border:1px solid #4a525c;border-radius:20mm;padding:2mm 5mm}
+  .placa .nfc svg{width:7mm;height:7mm}
+  .placa .rod{margin-top:auto;font-size:9pt;color:#9aa3ad;text-align:center}
+  .placa .rod b{color:#fff}
+  @media print{
+    @page{size:A5 portrait;margin:0}
+    body{background:none}
+    .ctl{display:none}
+    .placa{margin:0;box-shadow:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+  @media (max-width:600px){.placa{transform:scale(.62);transform-origin:top center;margin-bottom:-75mm}}
+</style>
+</head>
+<body>
+<div class="ctl">
+  <label for="url">Link da casa</label>
+  <input id="url" type="url">
+  <button onclick="print()">Imprimir (A5)</button>
+  <small>O QR code se atualiza ao mudar o link. Grave este mesmo link na etiqueta NFC (veja o README).</small>
+</div>
+
+<div class="placa">
+  <div class="faixa"></div>
+  <div class="sub">Mingardi &amp; Elias apresenta</div>
+  <h1>VILLA ANNA</h1>
+  <h2>Casa Modelo em 3D</h2>
+  <div class="qr" id="qr"></div>
+  <div class="cta">Entre na casa pelo<br>seu celular</div>
+  <div class="passos">Aponte a câmera para o código · caminhe pelos ambientes<br>escolha os acabamentos · fale com um corretor</div>
+  <div class="nfc">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 8.5a5 5 0 0 1 0 7"/><path d="M9.5 6a8.5 8.5 0 0 1 0 12"/><path d="M13 3.5a12 12 0 0 1 0 17"/></svg>
+    Ou encoste o celular aqui
+  </div>
+  <div class="rod"><b>Mingardi &amp; Elias</b> · Imagens ilustrativas</div>
+</div>
+
+<script>
+const PADRAO = 'https://lucasaguiar-eng.github.io/villa-anna-casa-modelo/';
+const inp = document.getElementById('url');
+inp.value = new URLSearchParams(location.search).get('url') || PADRAO;
+let qr;
+function desenha(){
+  const box = document.getElementById('qr'); box.innerHTML = '';
+  if (typeof QRCode === 'undefined') { box.textContent = 'Sem internet para gerar o QR.'; box.style.color = '#000'; return; }
+  qr = new QRCode(box, { text: inp.value.trim() || PADRAO, width: 512, height: 512, colorDark: '#1d2127', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+}
+inp.addEventListener('input', desenha);
+addEventListener('load', desenha);
+</script>
+</body>
+</html>

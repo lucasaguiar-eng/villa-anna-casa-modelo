@@ -56,6 +56,13 @@ body.walk .pad{display:grid}
 body.mover .mov{display:block}
 @media (max-width:700px){header h1 small{display:none}.ir{max-width:calc(100% - 170px);bottom:56px}.hbtn{padding:5px 8px;font-size:12px}}
 </style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1d2127">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Villa Anna">
+<link rel="apple-touch-icon" href="icone-192.png">
+<link rel="icon" href="icone-192.png">
 </head>
 <body>
 <div id="app">
@@ -6124,6 +6131,9 @@ function pinga(){clearTimeout(ocioso);if(PLANTAO)ocioso=setTimeout(reiniciar,IDL
 if(PLANTAO){['pointerdown','keydown','wheel','touchstart'].forEach(e=>addEventListener(e,pinga,{passive:true}));at.classList.add('on');pinga();}
 window.CASA=Object.assign(window.CASA||{},{abreLead:abreForm,abreCorretor,reiniciarPlantao:reiniciar});
 })();
+</script>
+<script>/* PWA: guarda a casa para abrir sem internet (só em https ou localhost) */
+if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 </body>
 </html>
